@@ -246,7 +246,7 @@ export function Dashboard({ products, saleLogs, monthlyGoal, monthlyChartData, w
                 {Math.round(goalProgress)}%
               </span>
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">earned this month towards goal</p>
+            <p className="text-xs text-gray-400 mt-0.5">logged this month towards goal</p>
             <div className="bg-gray-100 rounded-full h-1.5 mt-2">
               <div
                 className="bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full h-1.5 transition-all duration-700"

@@ -123,51 +123,33 @@ export const INITIAL_PRODUCTS: Product[] = [
   },
 ];
 
-export const INITIAL_SALE_LOGS: SaleLog[] = [
-  // March 2026 sales
-  { id: 's1',  productId: 'p7', units: 23, date: '2026-03-01' },
-  { id: 's2',  productId: 'p1', units: 12, date: '2026-03-02' },
-  { id: 's3',  productId: 'p4', units: 15, date: '2026-03-03' },
-  { id: 's4',  productId: 'p5', units:  9, date: '2026-03-04' },
-  { id: 's5',  productId: 'p7', units: 15, date: '2026-03-05' },
-  { id: 's6',  productId: 'p8', units:  7, date: '2026-03-06' },
-  { id: 's7',  productId: 'p4', units: 22, date: '2026-03-07' },
-  { id: 's8',  productId: 'p1', units:  8, date: '2026-03-08' },
-  { id: 's9',  productId: 'p5', units: 14, date: '2026-03-09' },
-  { id: 's10', productId: 'p7', units: 18, date: '2026-03-10' },
-  { id: 's11', productId: 'p8', units: 11, date: '2026-03-11' },
-  { id: 's12', productId: 'p1', units: 11, date: '2026-03-12' },
-  { id: 's13', productId: 'p2', units:  8, date: '2026-03-13' },
-  { id: 's14', productId: 'p4', units: 19, date: '2026-03-14' },
-  { id: 's15', productId: 'p7', units: 12, date: '2026-03-15' },
-  { id: 's16', productId: 'p9', units:  6, date: '2026-03-16' },
-  { id: 's17', productId: 'p3', units:  5, date: '2026-03-17' },
-];
+// No current-month sales pre-loaded — log your first sale to get started
+export const INITIAL_SALE_LOGS: SaleLog[] = [];
 
 export const MONTHLY_CHART_DATA: ChartDataPoint[] = [
-  { label: 'Apr', revenue: 623 },
-  { label: 'May', revenue: 734 },
-  { label: 'Jun', revenue: 891 },
-  { label: 'Jul', revenue: 823 },
-  { label: 'Aug', revenue: 1102 },
-  { label: 'Sep', revenue: 1234 },
-  { label: 'Oct', revenue: 1456 },
-  { label: 'Nov', revenue: 1678 },
-  { label: 'Dec', revenue: 2134 },
-  { label: 'Jan', revenue: 1345 },
-  { label: 'Feb', revenue: 1567 },
-  { label: 'Mar', revenue: 1120 },
+  { label: 'Apr', revenue: 47 },
+  { label: 'May', revenue: 83 },
+  { label: 'Jun', revenue: 121 },
+  { label: 'Jul', revenue: 98 },
+  { label: 'Aug', revenue: 156 },
+  { label: 'Sep', revenue: 189 },
+  { label: 'Oct', revenue: 214 },
+  { label: 'Nov', revenue: 267 },
+  { label: 'Dec', revenue: 341 },
+  { label: 'Jan', revenue: 198 },
+  { label: 'Feb', revenue: 243 },
+  { label: 'Mar', revenue: 0 },
 ];
 
 export const WEEKLY_CHART_DATA: ChartDataPoint[] = [
-  { label: 'Wk 1', revenue: 312 },
-  { label: 'Wk 2', revenue: 378 },
-  { label: 'Wk 3', revenue: 345 },
-  { label: 'Wk 4', revenue: 423 },
-  { label: 'Wk 5', revenue: 398 },
-  { label: 'Wk 6', revenue: 445 },
-  { label: 'Wk 7', revenue: 389 },
-  { label: 'Wk 8', revenue: 289 },
+  { label: 'Wk 1', revenue: 54 },
+  { label: 'Wk 2', revenue: 38 },
+  { label: 'Wk 3', revenue: 67 },
+  { label: 'Wk 4', revenue: 84 },
+  { label: 'Wk 5', revenue: 49 },
+  { label: 'Wk 6', revenue: 91 },
+  { label: 'Wk 7', revenue: 72 },
+  { label: 'Wk 8', revenue: 0 },
 ];
 
-export const DEFAULT_MONTHLY_GOAL = 2000;
+export const DEFAULT_MONTHLY_GOAL = 300;

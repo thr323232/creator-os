@@ -1,10 +1,10 @@
 import type { Category, PlatformName, ProductStatus, Difficulty } from './types';
 
 export const formatCurrency = (amount: number): string =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+  new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format(amount);
 
 export const formatCurrencyFull = (amount: number): string =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount);
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   template: 'Template',
