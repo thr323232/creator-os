@@ -1,121 +1,81 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useCallback } from 'react';
+import type { TabName, Product, SaleLog } from './types';
+import { Navigation } from './components/Navigation';
+import { Dashboard } from './components/Dashboard';
+import { Products } from './components/Products';
+import { Guide } from './components/Guide';
+import { Resources } from './components/Resources';
+import { INITIAL_PRODUCTS, INITIAL_SALE_LOGS, MONTHLY_CHART_DATA, WEEKLY_CHART_DATA, DEFAULT_MONTHLY_GOAL } from './data/sampleData';
+import { GUIDE_IDEAS } from './data/guideData';
 
-function App() {
-  const [count, setCount] = useState(0)
+let idCounter = 1000;
+const nextId = () => `gen-${++idCounter}`;
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState<TabName>('dashboard');
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [saleLogs, setSaleLogs] = useState<SaleLog[]>(INITIAL_SALE_LOGS);
+  const [monthlyGoal, setMonthlyGoal] = useState(DEFAULT_MONTHLY_GOAL);
+
+  const handleAddProduct = useCallback((data: Omit<Product, 'id'>) => {
+    setProducts(prev => [...prev, { ...data, id: nextId() }]);
+  }, []);
+
+  const handleEditProduct = useCallback((updated: Product) => {
+    setProducts(prev => prev.map(p => p.id === updated.id ? updated : p));
+  }, []);
+
+  const handleDeleteProduct = useCallback((id: string) => {
+    setProducts(prev => prev.filter(p => p.id !== id));
+    setSaleLogs(prev => prev.filter(l => l.productId !== id));
+  }, []);
+
+  const handleLogSale = useCallback((productId: string, units: number, date: string) => {
+    setSaleLogs(prev => [...prev, { id: nextId(), productId, units, date }]);
+    setProducts(prev =>
+      prev.map(p => p.id === productId ? { ...p, unitsSold: p.unitsSold + units } : p)
+    );
+  }, []);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+    <div className="min-h-screen bg-gray-50">
+      {/* Tab content — padded at bottom for fixed nav */}
+      <main className="max-w-2xl mx-auto pb-20">
+        <div
+          className="transition-opacity duration-150"
+          key={activeTab}
         >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          {activeTab === 'dashboard' && (
+            <Dashboard
+              products={products}
+              saleLogs={saleLogs}
+              monthlyGoal={monthlyGoal}
+              monthlyChartData={MONTHLY_CHART_DATA}
+              weeklyChartData={WEEKLY_CHART_DATA}
+            />
+          )}
+          {activeTab === 'products' && (
+            <Products
+              products={products}
+              saleLogs={saleLogs}
+              monthlyGoal={monthlyGoal}
+              onAddProduct={handleAddProduct}
+              onEditProduct={handleEditProduct}
+              onDeleteProduct={handleDeleteProduct}
+              onLogSale={handleLogSale}
+              onSetGoal={setMonthlyGoal}
+            />
+          )}
+          {activeTab === 'guide' && (
+            <Guide ideas={GUIDE_IDEAS} />
+          )}
+          {activeTab === 'resources' && (
+            <Resources />
+          )}
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      </main>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+    </div>
+  );
 }
-
-export default App
