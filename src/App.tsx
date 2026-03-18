@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Moon, Sun } from 'lucide-react';
-import type { TabName, Product, SaleLog } from './types';
+import type { TabName, Product, SaleLog, RoadmapItem, RoadmapStatus } from './types';
 import { Navigation } from './components/Navigation';
 import { Dashboard } from './components/Dashboard';
 import { Products } from './components/Products';
@@ -12,11 +12,35 @@ import { GUIDE_IDEAS } from './data/guideData';
 let idCounter = 1000;
 const nextId = () => `gen-${++idCounter}`;
 
+interface NewRoadmapData {
+  sourceId?: string;
+  name: string;
+  category: Product['category'];
+  platform: Product['platform'];
+  price: number;
+  description: string;
+}
+
+function loadRoadmap(): RoadmapItem[] {
+  try {
+    const stored = localStorage.getItem('roadmapItems');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRoadmap(items: RoadmapItem[]) {
+  localStorage.setItem('roadmapItems', JSON.stringify(items));
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabName>('dashboard');
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [saleLogs, setSaleLogs] = useState<SaleLog[]>(INITIAL_SALE_LOGS);
   const [monthlyGoal, setMonthlyGoal] = useState(DEFAULT_MONTHLY_GOAL);
+  const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>(loadRoadmap);
+  const [pendingTemplate, setPendingTemplate] = useState<Partial<Omit<Product, 'id'>> | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('darkMode') === 'true';
   });
@@ -46,9 +70,54 @@ export default function App() {
     );
   }, []);
 
+  const handleSaveToRoadmap = useCallback((data: NewRoadmapData) => {
+    setRoadmapItems(prev => {
+      // Don't add duplicates
+      if (data.sourceId && prev.some(r => r.sourceId === data.sourceId)) return prev;
+      const newItem: RoadmapItem = {
+        id: nextId(),
+        ...data,
+        status: 'idea',
+        savedAt: new Date().toISOString().slice(0, 10),
+      };
+      const updated = [newItem, ...prev];
+      saveRoadmap(updated);
+      return updated;
+    });
+  }, []);
+
+  const handleRemoveFromRoadmap = useCallback((id: string) => {
+    setRoadmapItems(prev => {
+      const updated = prev.filter(r => r.id !== id);
+      saveRoadmap(updated);
+      return updated;
+    });
+  }, []);
+
+  const handleUpdateRoadmapStatus = useCallback((id: string, status: RoadmapStatus) => {
+    setRoadmapItems(prev => {
+      const updated = prev.map(r => r.id === id ? { ...r, status } : r);
+      saveRoadmap(updated);
+      return updated;
+    });
+  }, []);
+
+  const handleStartBuilding = useCallback((item: RoadmapItem) => {
+    setPendingTemplate({
+      name: item.name,
+      category: item.category,
+      platform: item.platform,
+      price: item.price,
+      unitsSold: 0,
+      launchDate: new Date().toISOString().slice(0, 10),
+      status: 'draft',
+    });
+    handleRemoveFromRoadmap(item.id);
+    setActiveTab('products');
+  }, [handleRemoveFromRoadmap]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-200">
-      {/* Persistent top header with dark mode toggle */}
       <header className="sticky top-0 z-40 bg-gray-50/90 dark:bg-gray-950/90 backdrop-blur-sm border-b border-gray-200/60 dark:border-gray-800/60">
         <div className="max-w-2xl mx-auto flex items-center justify-between px-4 h-11">
           <span className="text-sm font-bold text-gray-900 dark:text-white tracking-tight">Creator OS</span>
@@ -62,7 +131,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Tab content */}
       <main className="max-w-2xl mx-auto pb-20">
         <div className="transition-opacity duration-150" key={activeTab}>
           {activeTab === 'dashboard' && (
@@ -73,6 +141,9 @@ export default function App() {
               monthlyChartData={MONTHLY_CHART_DATA}
               weeklyChartData={WEEKLY_CHART_DATA}
               darkMode={darkMode}
+              roadmapItems={roadmapItems}
+              onSaveToRoadmap={handleSaveToRoadmap}
+              onNavigateToProducts={() => setActiveTab('products')}
             />
           )}
           {activeTab === 'products' && (
@@ -85,10 +156,22 @@ export default function App() {
               onDeleteProduct={handleDeleteProduct}
               onLogSale={handleLogSale}
               onSetGoal={setMonthlyGoal}
+              roadmapItems={roadmapItems}
+              onSaveToRoadmap={handleSaveToRoadmap}
+              onRemoveFromRoadmap={handleRemoveFromRoadmap}
+              onUpdateRoadmapStatus={handleUpdateRoadmapStatus}
+              onStartBuilding={handleStartBuilding}
+              pendingTemplate={pendingTemplate}
+              onClearPendingTemplate={() => setPendingTemplate(null)}
             />
           )}
           {activeTab === 'guide' && (
-            <Guide ideas={GUIDE_IDEAS} />
+            <Guide
+              ideas={GUIDE_IDEAS}
+              roadmapItems={roadmapItems}
+              onSaveToRoadmap={handleSaveToRoadmap}
+              onRemoveFromRoadmap={handleRemoveFromRoadmap}
+            />
           )}
           {activeTab === 'resources' && (
             <Resources />

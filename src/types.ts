@@ -22,6 +22,8 @@ export type PlatformName =
 export type ProductStatus = 'live' | 'draft' | 'retired';
 export type Difficulty = 'beginner' | 'intermediate' | 'advanced';
 export type TabName = 'dashboard' | 'products' | 'guide' | 'resources';
+export type RoadmapStatus = 'idea' | 'planning' | 'in-progress' | 'ready-to-launch';
+export type SuggestionTag = 'trending' | 'high-demand' | 'beginner-friendly' | 'quick-win' | 'evergreen';
 
 export interface Product {
   id: string;
@@ -39,6 +41,18 @@ export interface SaleLog {
   productId: string;
   units: number;
   date: string;
+}
+
+export interface RoadmapItem {
+  id: string;
+  sourceId?: string;
+  name: string;
+  category: Category;
+  platform: PlatformName;
+  price: number;
+  description: string;
+  status: RoadmapStatus;
+  savedAt: string;
 }
 
 export interface GuideIdea {
@@ -80,4 +94,5 @@ export interface ProductSuggestion {
   platform: PlatformName;
   price: number;
   description: string;
+  tags: SuggestionTag[];
 }

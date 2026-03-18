@@ -5,10 +5,11 @@ import {
 } from 'recharts';
 import {
   DollarSign, Package, Star, Download,
-  BarChart2, TrendingUp, Zap, ArrowUp,
+  BarChart2, TrendingUp, Zap, ArrowUp, Bookmark, BookmarkCheck, ArrowRight,
 } from 'lucide-react';
-import type { Product, SaleLog, ChartDataPoint } from '../types';
-import { formatCurrency, formatCurrencyFull, CATEGORY_LABELS } from '../utils';
+import type { Product, SaleLog, ChartDataPoint, RoadmapItem, ProductSuggestion } from '../types';
+import { formatCurrency, formatCurrencyFull, CATEGORY_LABELS, CATEGORY_COLORS, PLATFORM_COLORS } from '../utils';
+import { SUGGESTED_PRODUCTS } from '../data/suggestionsData';
 
 interface Props {
   products: Product[];
@@ -17,6 +18,72 @@ interface Props {
   monthlyChartData: ChartDataPoint[];
   weeklyChartData: ChartDataPoint[];
   darkMode: boolean;
+  roadmapItems: RoadmapItem[];
+  onSaveToRoadmap: (data: {
+    sourceId?: string;
+    name: string;
+    category: Product['category'];
+    platform: Product['platform'];
+    price: number;
+    description: string;
+  }) => void;
+  onNavigateToProducts: () => void;
+}
+
+const TAG_META: Record<string, { label: string; bg: string }> = {
+  trending: { label: '🔥 Trending', bg: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300' },
+  'high-demand': { label: '⭐ High Demand', bg: 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300' },
+  'quick-win': { label: '⚡ Quick Win', bg: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' },
+  'beginner-friendly': { label: '🌱 Beginner', bg: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' },
+  evergreen: { label: '🍃 Evergreen', bg: 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300' },
+};
+
+function IdeaCard({
+  suggestion,
+  isSaved,
+  onSave,
+}: {
+  suggestion: ProductSuggestion;
+  isSaved: boolean;
+  onSave: () => void;
+}) {
+  const primaryTag = suggestion.tags[0];
+  const tagMeta = primaryTag ? TAG_META[primaryTag] : null;
+
+  return (
+    <div className="flex-shrink-0 w-52 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-3.5 shadow-sm">
+      {tagMeta && (
+        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tagMeta.bg} mb-2 inline-block`}>
+          {tagMeta.label}
+        </span>
+      )}
+      <div className="flex flex-wrap gap-1 mb-2">
+        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${CATEGORY_COLORS[suggestion.category]}`}>
+          {CATEGORY_LABELS[suggestion.category]}
+        </span>
+      </div>
+      <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight mb-1">{suggestion.name}</p>
+      <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed mb-2 line-clamp-2">{suggestion.description}</p>
+      <div className="flex items-center justify-between">
+        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${PLATFORM_COLORS[suggestion.platform]}`}>
+          {suggestion.platform}
+        </span>
+        <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{formatCurrency(suggestion.price)}</span>
+      </div>
+      <button
+        onClick={onSave}
+        className={`w-full mt-2.5 flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+          isSaved
+            ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+            : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+        }`}
+      >
+        {isSaved
+          ? <><BookmarkCheck size={12} /> Saved to Roadmap</>
+          : <><Bookmark size={12} /> Save to Roadmap</>}
+      </button>
+    </div>
+  );
 }
 
 function SummaryCard({
@@ -56,7 +123,10 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   );
 }
 
-export function Dashboard({ products, saleLogs, monthlyGoal, monthlyChartData, weeklyChartData, darkMode }: Props) {
+export function Dashboard({
+  products, saleLogs, monthlyGoal, monthlyChartData, weeklyChartData,
+  darkMode, roadmapItems, onSaveToRoadmap, onNavigateToProducts,
+}: Props) {
   const [chartView, setChartView] = useState<'weekly' | 'monthly'>('monthly');
 
   const totalRevenue = products.reduce((sum, p) => sum + p.price * p.unitsSold, 0);
@@ -82,6 +152,13 @@ export function Dashboard({ products, saleLogs, monthlyGoal, monthlyChartData, w
 
   const axisColor = darkMode ? '#6b7280' : '#9ca3af';
   const gridColor = darkMode ? '#1f2937' : '#f0f0f0';
+
+  // Featured suggestions for "Ideas for You" — trending + high-demand
+  const featuredSuggestions = SUGGESTED_PRODUCTS.filter(s =>
+    s.tags.includes('trending') || s.tags.includes('high-demand')
+  ).slice(0, 8);
+
+  const isSaved = (id: string) => roadmapItems.some(r => r.sourceId === id);
 
   return (
     <div className="px-4 pt-4 pb-6 space-y-5">
@@ -110,6 +187,84 @@ export function Dashboard({ products, saleLogs, monthlyGoal, monthlyChartData, w
           <div className="bg-white rounded-full h-2 transition-all duration-700" style={{ width: `${goalProgress}%` }} />
         </div>
       </div>
+
+      {/* ── IDEAS FOR YOU ─────────────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">Ideas for You</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Trending & high-demand right now — save any to your roadmap</p>
+          </div>
+          <button
+            onClick={onNavigateToProducts}
+            className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-700 dark:hover:text-indigo-300"
+          >
+            All ideas
+            <ArrowRight size={12} />
+          </button>
+        </div>
+        <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+          {featuredSuggestions.map(s => (
+            <IdeaCard
+              key={s.id}
+              suggestion={s}
+              isSaved={isSaved(s.id)}
+              onSave={() => !isSaved(s.id) && onSaveToRoadmap({
+                sourceId: s.id,
+                name: s.name,
+                category: s.category,
+                platform: s.platform,
+                price: s.price,
+                description: s.description,
+              })}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Roadmap snapshot (if has items) */}
+      {roadmapItems.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50 dark:border-gray-800">
+            <div className="flex items-center gap-2">
+              <BookmarkCheck size={15} className="text-indigo-500 dark:text-indigo-400" />
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Your Roadmap</p>
+              <span className="text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-full">
+                {roadmapItems.length}
+              </span>
+            </div>
+            <button onClick={onNavigateToProducts}
+              className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1">
+              View all <ArrowRight size={11} />
+            </button>
+          </div>
+          {roadmapItems.slice(0, 3).map((item, i, arr) => (
+            <div key={item.id}
+              className={`flex items-center gap-3 px-4 py-3 ${i < arr.length - 1 ? 'border-b border-gray-50 dark:border-gray-800' : ''}`}>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.name}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{CATEGORY_LABELS[item.category]} · {formatCurrency(item.price)}</p>
+              </div>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                item.status === 'idea' ? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' :
+                item.status === 'planning' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' :
+                item.status === 'in-progress' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+                'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+              }`}>
+                {item.status === 'idea' ? '💡 Idea' :
+                 item.status === 'planning' ? '📋 Planning' :
+                 item.status === 'in-progress' ? '🛠 Building' : '🚀 Ready'}
+              </span>
+            </div>
+          ))}
+          {roadmapItems.length > 3 && (
+            <button onClick={onNavigateToProducts}
+              className="w-full py-2.5 text-xs text-gray-400 dark:text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors border-t border-gray-50 dark:border-gray-800">
+              +{roadmapItems.length - 3} more in your roadmap →
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div>
@@ -227,7 +382,8 @@ export function Dashboard({ products, saleLogs, monthlyGoal, monthlyChartData, w
                 const rev = product.price * product.unitsSold;
                 const maxRev = arr.reduce((m, p) => Math.max(m, p.price * p.unitsSold), 1);
                 return (
-                  <div key={product.id} className={`px-4 py-3 ${i < arr.length - 1 ? 'border-b border-gray-50 dark:border-gray-800' : ''}`}>
+                  <div key={product.id}
+                    className={`px-4 py-3 ${i < arr.length - 1 ? 'border-b border-gray-50 dark:border-gray-800' : ''}`}>
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-gray-400 dark:text-gray-500 font-bold w-4 shrink-0">#{i + 1}</span>
                       <div className="flex-1 min-w-0">

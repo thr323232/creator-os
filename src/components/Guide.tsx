@@ -1,14 +1,43 @@
 import { useState, useMemo } from 'react';
-import { Flame, ChevronDown, ChevronUp, Star, Clock, DollarSign, Wrench, X } from 'lucide-react';
-import type { GuideIdea, Category, Difficulty } from '../types';
+import {
+  Flame, ChevronDown, ChevronUp, Star, Clock, DollarSign, Wrench, X,
+  Bookmark, BookmarkCheck,
+} from 'lucide-react';
+import type { GuideIdea, Category, Difficulty, RoadmapItem, PlatformName } from '../types';
 import {
   CATEGORY_LABELS, CATEGORY_COLORS, DIFFICULTY_COLORS,
   ALL_CATEGORIES, DIFFICULTY_LEVELS, TOOL_OPTIONS,
 } from '../utils';
 
+interface NewRoadmapData {
+  sourceId?: string;
+  name: string;
+  category: Category;
+  platform: PlatformName;
+  price: number;
+  description: string;
+}
+
 interface Props {
   ideas: GuideIdea[];
+  roadmapItems: RoadmapItem[];
+  onSaveToRoadmap: (data: NewRoadmapData) => void;
+  onRemoveFromRoadmap: (id: string) => void;
 }
+
+// Default platform per category when saving from Guide
+const CATEGORY_DEFAULT_PLATFORM: Record<Category, PlatformName> = {
+  template: 'Etsy',
+  'notion-template': 'Gumroad',
+  printable: 'Etsy',
+  preset: 'Creative Market',
+  'digital-art': 'Creative Market',
+  ebook: 'Gumroad',
+  font: 'Creative Market',
+  course: 'Payhip',
+  audio: 'Gumroad',
+  other: 'Gumroad',
+};
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -21,7 +50,12 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-function IdeaCard({ idea }: { idea: GuideIdea }) {
+function IdeaCard({ idea, isSaved, onSave, onUnsave }: {
+  idea: GuideIdea;
+  isSaved: boolean;
+  onSave: () => void;
+  onUnsave: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -121,13 +155,27 @@ function IdeaCard({ idea }: { idea: GuideIdea }) {
               ))}
             </ol>
           </div>
+
+          {/* Save to Roadmap CTA */}
+          <button
+            onClick={e => { e.stopPropagation(); isSaved ? onUnsave() : onSave(); }}
+            className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all active:scale-[0.98] ${
+              isSaved
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
+            }`}
+          >
+            {isSaved
+              ? <><BookmarkCheck size={15} /> Saved to Roadmap — tap to remove</>
+              : <><Bookmark size={15} /> Save to My Roadmap</>}
+          </button>
         </div>
       )}
     </div>
   );
 }
 
-export function Guide({ ideas }: Props) {
+export function Guide({ ideas, roadmapItems, onSaveToRoadmap, onRemoveFromRoadmap }: Props) {
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
   const [filterDifficulty, setFilterDifficulty] = useState<Difficulty | 'all'>('all');
   const [filterTool, setFilterTool] = useState<string | 'all'>('all');
@@ -145,6 +193,9 @@ export function Guide({ ideas }: Props) {
   const hasFilters = filterCategory !== 'all' || filterDifficulty !== 'all' || filterTool !== 'all' || showTrending;
   const clearAll = () => { setFilterCategory('all'); setFilterDifficulty('all'); setFilterTool('all'); setShowTrending(false); };
 
+  const isSaved = (id: string) => roadmapItems.some(r => r.sourceId === id);
+  const getSavedId = (sourceId: string) => roadmapItems.find(r => r.sourceId === sourceId)?.id;
+
   const pillBase = 'flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all';
   const pillActive = 'bg-indigo-600 text-white';
   const pillInactive = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700';
@@ -153,7 +204,9 @@ export function Guide({ ideas }: Props) {
     <div className="px-4 pt-4 pb-6 space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Product Ideas</h1>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{ideas.length} digital product ideas to explore</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+          {ideas.length} ideas to explore · {roadmapItems.length} saved to your roadmap
+        </p>
       </div>
 
       <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-0.5">
@@ -218,7 +271,25 @@ export function Guide({ ideas }: Props) {
             <button onClick={clearAll} className="mt-2 text-sm text-indigo-600 dark:text-indigo-400 font-medium">Clear filters</button>
           </div>
         ) : (
-          filtered.map(idea => <IdeaCard key={idea.id} idea={idea} />)
+          filtered.map(idea => (
+            <IdeaCard
+              key={idea.id}
+              idea={idea}
+              isSaved={isSaved(idea.id)}
+              onSave={() => onSaveToRoadmap({
+                sourceId: idea.id,
+                name: idea.type,
+                category: idea.category,
+                platform: CATEGORY_DEFAULT_PLATFORM[idea.category],
+                price: idea.pricingMin,
+                description: idea.description.slice(0, 150),
+              })}
+              onUnsave={() => {
+                const savedId = getSavedId(idea.id);
+                if (savedId) onRemoveFromRoadmap(savedId);
+              }}
+            />
+          ))
         )}
       </div>
     </div>

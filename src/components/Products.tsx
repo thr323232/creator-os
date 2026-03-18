@@ -1,15 +1,28 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Plus, Edit2, Trash2, Target, Filter, Package,
-  ChevronDown, X, Check, PlusCircle, ArrowRight, Sparkles,
+  ChevronDown, ChevronUp, X, Check, PlusCircle, ArrowRight, Sparkles,
+  Bookmark, BookmarkCheck, MapPin, ChevronRight,
 } from 'lucide-react';
-import type { Product, SaleLog, Category, PlatformName, ProductStatus, ProductSuggestion } from '../types';
+import type {
+  Product, SaleLog, Category, PlatformName, ProductStatus,
+  ProductSuggestion, RoadmapItem, RoadmapStatus,
+} from '../types';
 import {
   formatCurrency, CATEGORY_LABELS, CATEGORY_COLORS,
   PLATFORM_COLORS, STATUS_COLORS, ALL_CATEGORIES,
   ALL_PLATFORMS, ALL_STATUSES,
 } from '../utils';
 import { SUGGESTED_PRODUCTS } from '../data/suggestionsData';
+
+interface NewRoadmapData {
+  sourceId?: string;
+  name: string;
+  category: Category;
+  platform: PlatformName;
+  price: number;
+  description: string;
+}
 
 interface Props {
   products: Product[];
@@ -20,6 +33,13 @@ interface Props {
   onDeleteProduct: (id: string) => void;
   onLogSale: (productId: string, units: number, date: string) => void;
   onSetGoal: (goal: number) => void;
+  roadmapItems: RoadmapItem[];
+  onSaveToRoadmap: (data: NewRoadmapData) => void;
+  onRemoveFromRoadmap: (id: string) => void;
+  onUpdateRoadmapStatus: (id: string, status: RoadmapStatus) => void;
+  onStartBuilding: (item: RoadmapItem) => void;
+  pendingTemplate: Partial<Omit<Product, 'id'>> | null;
+  onClearPendingTemplate: () => void;
 }
 
 const SORT_OPTIONS = [
@@ -31,6 +51,22 @@ const SORT_OPTIONS = [
   { value: 'date-asc', label: 'Oldest First' },
 ];
 
+const ROADMAP_STATUSES: { value: RoadmapStatus; label: string; emoji: string; color: string }[] = [
+  { value: 'idea', label: 'Idea', emoji: '💡', color: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400' },
+  { value: 'planning', label: 'Planning', emoji: '📋', color: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' },
+  { value: 'in-progress', label: 'Building', emoji: '🛠', color: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' },
+  { value: 'ready-to-launch', label: 'Ready', emoji: '🚀', color: 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' },
+];
+
+const TAG_LABELS: Record<string, string> = {
+  'all': 'All',
+  'trending': '🔥 Trending',
+  'high-demand': '⭐ High Demand',
+  'quick-win': '⚡ Quick Win',
+  'beginner-friendly': '🌱 Beginner',
+  'evergreen': '🍃 Evergreen',
+};
+
 const EMPTY_FORM: Omit<Product, 'id'> = {
   name: '',
   category: 'template',
@@ -41,6 +77,9 @@ const EMPTY_FORM: Omit<Product, 'id'> = {
   status: 'draft',
 };
 
+// Unique categories in suggestions
+const SUGGESTION_CATEGORIES = ['all', ...new Set(SUGGESTED_PRODUCTS.map(s => s.category))] as (Category | 'all')[];
+
 function Badge({ label, className }: { label: string; className: string }) {
   return (
     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${className}`}>
@@ -50,9 +89,7 @@ function Badge({ label, className }: { label: string; className: string }) {
 }
 
 function GoalProgress({ goal, currentRevenue, onSetGoal }: {
-  goal: number;
-  currentRevenue: number;
-  onSetGoal: (g: number) => void;
+  goal: number; currentRevenue: number; onSetGoal: (g: number) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [tempGoal, setTempGoal] = useState(String(goal));
@@ -75,22 +112,15 @@ function GoalProgress({ goal, currentRevenue, onSetGoal }: {
           <div className="flex items-center gap-1.5">
             <div className="relative">
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm">£</span>
-              <input
-                type="number"
-                value={tempGoal}
-                onChange={e => setTempGoal(e.target.value)}
-                className="w-24 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg pl-5 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                autoFocus
-              />
+              <input type="number" value={tempGoal} onChange={e => setTempGoal(e.target.value)}
+                className="w-24 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg pl-5 pr-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" autoFocus />
             </div>
             <button onClick={handleSave} className="bg-indigo-600 text-white rounded-lg p-1"><Check size={14} /></button>
             <button onClick={() => setEditing(false)} className="text-gray-400 rounded-lg p-1"><X size={14} /></button>
           </div>
         ) : (
-          <button
-            onClick={() => { setTempGoal(String(goal)); setEditing(true); }}
-            className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-700"
-          >Edit goal</button>
+          <button onClick={() => { setTempGoal(String(goal)); setEditing(true); }}
+            className="text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-700">Edit goal</button>
         )}
       </div>
       <div className="flex items-baseline gap-1 mb-2">
@@ -99,10 +129,8 @@ function GoalProgress({ goal, currentRevenue, onSetGoal }: {
         <span className="ml-auto text-sm font-bold text-indigo-600 dark:text-indigo-400">{Math.round(progress)}%</span>
       </div>
       <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-2.5">
-        <div
-          className={`h-2.5 rounded-full transition-all duration-700 ${progress >= 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-indigo-500 to-violet-500'}`}
-          style={{ width: `${progress}%` }}
-        />
+        <div className={`h-2.5 rounded-full transition-all duration-700 ${progress >= 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-indigo-500 to-violet-500'}`}
+          style={{ width: `${progress}%` }} />
       </div>
       {progress >= 100 && (
         <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1.5">🎉 Goal reached! Time to raise the bar.</p>
@@ -111,11 +139,244 @@ function GoalProgress({ goal, currentRevenue, onSetGoal }: {
   );
 }
 
+// ── ROADMAP SECTION ────────────────────────────────────────────────────────────
+function RoadmapSection({ items, onRemove, onUpdateStatus, onStartBuilding }: {
+  items: RoadmapItem[];
+  onRemove: (id: string) => void;
+  onUpdateStatus: (id: string, status: RoadmapStatus) => void;
+  onStartBuilding: (item: RoadmapItem) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  const [filter, setFilter] = useState<RoadmapStatus | 'all'>('all');
+  const [statusMenuOpen, setStatusMenuOpen] = useState<string | null>(null);
+
+  const filtered = filter === 'all' ? items : items.filter(i => i.status === filter);
+
+  const statusMeta = (status: RoadmapStatus) =>
+    ROADMAP_STATUSES.find(s => s.value === status)!;
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-indigo-100 dark:border-indigo-800/50 overflow-hidden">
+      <button onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3.5">
+        <div className="flex items-center gap-2">
+          <MapPin size={15} className="text-indigo-600 dark:text-indigo-400" />
+          <p className="text-sm font-bold text-gray-900 dark:text-white">My Roadmap</p>
+          <span className="text-[10px] font-bold bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-full">
+            {items.length}
+          </span>
+        </div>
+        {open ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-indigo-50 dark:border-indigo-800/50">
+          {/* Status filter tabs */}
+          <div className="flex gap-1.5 px-4 py-2.5 overflow-x-auto scrollbar-hide">
+            <button onClick={() => setFilter('all')}
+              className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${filter === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
+              All ({items.length})
+            </button>
+            {ROADMAP_STATUSES.map(s => {
+              const count = items.filter(i => i.status === s.value).length;
+              if (count === 0) return null;
+              return (
+                <button key={s.value} onClick={() => setFilter(s.value)}
+                  className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${filter === s.value ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
+                  {s.emoji} {s.label} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          {filtered.length === 0 ? (
+            <p className="px-4 pb-4 text-xs text-gray-400 dark:text-gray-500">No items with this status.</p>
+          ) : (
+            <div className="divide-y divide-gray-50 dark:divide-gray-800">
+              {filtered.map(item => {
+                const meta = statusMeta(item.status);
+                return (
+                  <div key={item.id} className="px-4 py-3">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                          <Badge label={CATEGORY_LABELS[item.category]} className={CATEGORY_COLORS[item.category]} />
+                          <Badge label={item.platform} className={PLATFORM_COLORS[item.platform]} />
+                        </div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">{item.name}</p>
+                        <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-0.5">{formatCurrency(item.price)}</p>
+                      </div>
+                      <button onClick={() => onRemove(item.id)}
+                        className="flex-shrink-0 text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-0.5">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2.5">
+                      {/* Status pill / dropdown */}
+                      <div className="relative">
+                        <button onClick={() => setStatusMenuOpen(statusMenuOpen === item.id ? null : item.id)}
+                          className={`flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all ${meta.color}`}>
+                          {meta.emoji} {meta.label}
+                          <ChevronDown size={10} />
+                        </button>
+                        {statusMenuOpen === item.id && (
+                          <div className="absolute top-full left-0 mt-1 z-20 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden min-w-[140px]">
+                            {ROADMAP_STATUSES.map(s => (
+                              <button key={s.value}
+                                onClick={() => { onUpdateStatus(item.id, s.value); setStatusMenuOpen(null); }}
+                                className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left ${item.status === s.value ? 'text-indigo-600 dark:text-indigo-400 font-semibold' : 'text-gray-700 dark:text-gray-300'}`}>
+                                {s.emoji} {s.label}
+                                {item.status === s.value && <Check size={10} className="ml-auto" />}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={() => onStartBuilding(item)}
+                        className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 active:scale-95 transition-all">
+                        Start Building <ArrowRight size={10} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── INSPIRATION BOARD ──────────────────────────────────────────────────────────
+function InspirationBoard({ roadmapItems, onSaveToRoadmap, onUseTemplate, defaultOpen }: {
+  roadmapItems: RoadmapItem[];
+  onSaveToRoadmap: (data: NewRoadmapData) => void;
+  onUseTemplate: (s: ProductSuggestion) => void;
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const [categoryFilter, setCategoryFilter] = useState<Category | 'all'>('all');
+  const [tagFilter, setTagFilter] = useState<string>('all');
+
+  const filtered = useMemo(() => {
+    return SUGGESTED_PRODUCTS.filter(s => {
+      if (categoryFilter !== 'all' && s.category !== categoryFilter) return false;
+      if (tagFilter !== 'all' && !s.tags.includes(tagFilter as ProductSuggestion['tags'][number])) return false;
+      return true;
+    });
+  }, [categoryFilter, tagFilter]);
+
+  const isSaved = (id: string) => roadmapItems.some(r => r.sourceId === id);
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <button onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3.5">
+        <div className="flex items-center gap-2">
+          <Sparkles size={15} className="text-amber-500" />
+          <p className="text-sm font-bold text-gray-900 dark:text-white">Inspiration Board</p>
+          <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full">
+            {SUGGESTED_PRODUCTS.length} ideas
+          </span>
+        </div>
+        {open ? <ChevronUp size={15} className="text-gray-400" /> : <ChevronDown size={15} className="text-gray-400" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-gray-50 dark:border-gray-800">
+          {/* Category filter */}
+          <div className="px-4 pt-3 pb-1">
+            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Category</p>
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+              {SUGGESTION_CATEGORIES.map(cat => (
+                <button key={cat} onClick={() => setCategoryFilter(cat)}
+                  className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
+                    categoryFilter === cat
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}>
+                  {cat === 'all' ? `All (${SUGGESTED_PRODUCTS.length})` : CATEGORY_LABELS[cat]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tag filter */}
+          <div className="px-4 pt-1 pb-3">
+            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Filter by</p>
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+              {Object.entries(TAG_LABELS).map(([key, label]) => (
+                <button key={key} onClick={() => setTagFilter(key)}
+                  className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
+                    tagFilter === key
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="px-3 pb-1">
+            <p className="text-xs text-gray-400 dark:text-gray-500 px-1 mb-2">
+              {filtered.length} idea{filtered.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+
+          {/* Suggestion cards */}
+          <div className="px-3 pb-4 space-y-2.5">
+            {filtered.map(s => {
+              const saved = isSaved(s.id);
+              return (
+                <div key={s.id}
+                  className="border border-dashed border-indigo-200 dark:border-indigo-800 rounded-xl p-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap gap-1 mb-1.5">
+                        <Badge label={CATEGORY_LABELS[s.category]} className={CATEGORY_COLORS[s.category]} />
+                        <Badge label={s.platform} className={PLATFORM_COLORS[s.platform]} />
+                        {s.tags.slice(0, 2).map(tag => (
+                          <span key={tag} className="text-[10px] font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full">
+                            {TAG_LABELS[tag]}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">{s.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{s.description}</p>
+                      <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-1.5">Suggested: {formatCurrency(s.price)}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      onClick={() => !saved && onSaveToRoadmap({ sourceId: s.id, name: s.name, category: s.category, platform: s.platform, price: s.price, description: s.description })}
+                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+                        saved
+                          ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                          : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'
+                      }`}
+                    >
+                      {saved ? <><BookmarkCheck size={11} /> Saved</> : <><Bookmark size={11} /> Save to Roadmap</>}
+                    </button>
+                    <button onClick={() => onUseTemplate(s)}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-indigo-600 text-white rounded-xl py-1.5 text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all">
+                      Use template <ChevronRight size={11} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── PRODUCT FORM ───────────────────────────────────────────────────────────────
 function ProductForm({
-  initial,
-  onSave,
-  onClose,
-  title,
+  initial, onSave, onClose, title,
 }: {
   initial: Omit<Product, 'id'> & { id?: string };
   onSave: (data: Omit<Product, 'id'>) => void;
@@ -241,62 +502,12 @@ function LogSaleModal({ product, onLog, onClose }: {
   );
 }
 
-function SuggestionsPanel({ onUseTemplate, onDismiss }: {
-  onUseTemplate: (s: ProductSuggestion) => void;
-  onDismiss: () => void;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="text-center py-6">
-        <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mx-auto mb-3">
-          <Package size={28} className="text-indigo-500 dark:text-indigo-400" />
-        </div>
-        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">No products yet</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs mx-auto">
-          Add your first product above, or get a head start with one of these popular ideas.
-        </p>
-      </div>
-
-      <div className="flex items-center gap-2 mb-1">
-        <Sparkles size={14} className="text-amber-500" />
-        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Popular starter products</p>
-      </div>
-
-      {SUGGESTED_PRODUCTS.map(s => (
-        <div key={s.id}
-          className="bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-indigo-200 dark:border-indigo-800 p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap gap-1.5 mb-1.5">
-                <Badge label={CATEGORY_LABELS[s.category]} className={CATEGORY_COLORS[s.category]} />
-                <Badge label={s.platform} className={PLATFORM_COLORS[s.platform]} />
-              </div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">{s.name}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">{s.description}</p>
-              <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mt-1.5">Suggested price: {formatCurrency(s.price)}</p>
-            </div>
-            <button
-              onClick={() => onUseTemplate(s)}
-              className="flex-shrink-0 flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-3 py-2 text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all"
-            >
-              Use
-              <ArrowRight size={12} />
-            </button>
-          </div>
-        </div>
-      ))}
-
-      <button onClick={onDismiss}
-        className="w-full text-xs text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400 py-2 transition-colors">
-        Skip suggestions
-      </button>
-    </div>
-  );
-}
-
+// ── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 export function Products({
   products, saleLogs, monthlyGoal,
   onAddProduct, onEditProduct, onDeleteProduct, onLogSale, onSetGoal,
+  roadmapItems, onSaveToRoadmap, onRemoveFromRoadmap, onUpdateRoadmapStatus, onStartBuilding,
+  pendingTemplate, onClearPendingTemplate,
 }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [formInitial, setFormInitial] = useState<Omit<Product, 'id'>>(EMPTY_FORM);
@@ -307,8 +518,15 @@ export function Products({
   const [sortBy, setSortBy] = useState('revenue-desc');
   const [showFilters, setShowFilters] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Trigger form open when a pending template is set from App (e.g. Start Building)
+  useEffect(() => {
+    if (pendingTemplate) {
+      setFormInitial({ ...EMPTY_FORM, ...pendingTemplate });
+      setShowForm(true);
+      onClearPendingTemplate();
+    }
+  }, [pendingTemplate, onClearPendingTemplate]);
 
   const currentMonthStr = '2026-03';
   const revenueThisMonth = saleLogs
@@ -337,17 +555,11 @@ export function Products({
   }, [products, filterCategory, filterPlatform, sortBy]);
 
   const activeFilters = (filterCategory !== 'all' ? 1 : 0) + (filterPlatform !== 'all' ? 1 : 0);
-  const isEmpty = products.length === 0 && !suggestionsDismissed;
 
   const handleUseSuggestion = (s: ProductSuggestion) => {
     setFormInitial({
-      name: s.name,
-      category: s.category,
-      platform: s.platform,
-      price: s.price,
-      unitsSold: 0,
-      launchDate: new Date().toISOString().slice(0, 10),
-      status: 'draft',
+      name: s.name, category: s.category, platform: s.platform, price: s.price,
+      unitsSold: 0, launchDate: new Date().toISOString().slice(0, 10), status: 'draft',
     });
     setShowForm(true);
   };
@@ -358,7 +570,6 @@ export function Products({
   };
 
   const cardClass = 'bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800';
-  const statCellClass = 'bg-gray-50 dark:bg-gray-800 rounded-xl p-2.5 text-center';
 
   return (
     <div className="px-4 pt-4 pb-6 space-y-4">
@@ -370,10 +581,8 @@ export function Products({
             {products.length} total · {products.filter(p => p.status === 'live').length} live
           </p>
         </div>
-        <button
-          onClick={openNewForm}
-          className="flex items-center gap-1.5 bg-indigo-600 text-white rounded-xl px-3.5 py-2.5 text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all shadow-sm shadow-indigo-200 dark:shadow-indigo-900"
-        >
+        <button onClick={openNewForm}
+          className="flex items-center gap-1.5 bg-indigo-600 text-white rounded-xl px-3.5 py-2.5 text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all shadow-sm shadow-indigo-200 dark:shadow-indigo-900">
           <Plus size={16} />
           Add
         </button>
@@ -382,24 +591,39 @@ export function Products({
       {/* Monthly Goal */}
       <GoalProgress goal={monthlyGoal} currentRevenue={revenueThisMonth} onSetGoal={onSetGoal} />
 
-      {/* Empty state — suggestions */}
-      {isEmpty ? (
-        <SuggestionsPanel
-          onUseTemplate={handleUseSuggestion}
-          onDismiss={() => setSuggestionsDismissed(true)}
+      {/* ── ROADMAP (always visible when has items) ── */}
+      {roadmapItems.length > 0 && (
+        <RoadmapSection
+          items={roadmapItems}
+          onRemove={onRemoveFromRoadmap}
+          onUpdateStatus={onUpdateRoadmapStatus}
+          onStartBuilding={onStartBuilding}
         />
-      ) : (
+      )}
+
+      {/* ── INSPIRATION BOARD (always visible) ── */}
+      <InspirationBoard
+        roadmapItems={roadmapItems}
+        onSaveToRoadmap={onSaveToRoadmap}
+        onUseTemplate={handleUseSuggestion}
+        defaultOpen={products.length === 0}
+      />
+
+      {/* ── PRODUCT LIST ── */}
+      {products.length > 0 && (
         <>
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-sm font-bold text-gray-900 dark:text-white">Your Products</p>
+          </div>
+
           {/* Filter / Sort Bar */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
+            <button onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
                 activeFilters > 0
                   ? 'border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
                   : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400'
-              }`}
-            >
+              }`}>
               <Filter size={13} />
               Filters
               {activeFilters > 0 && (
@@ -409,30 +633,24 @@ export function Products({
               )}
             </button>
             <div className="relative flex-1">
-              <select
-                value={sortBy}
-                onChange={e => setSortBy(e.target.value)}
-                className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-xl pl-3 pr-7 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none"
-              >
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                className="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-xl pl-3 pr-7 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none">
                 {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
           </div>
 
-          {/* Expanded Filters */}
           {showFilters && (
             <div className={`${cardClass} p-4 space-y-3`}>
               <div>
                 <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Category</p>
                 <div className="flex flex-wrap gap-1.5">
                   <button onClick={() => setFilterCategory('all')}
-                    className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${filterCategory === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                    All
-                  </button>
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${filterCategory === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>All</button>
                   {ALL_CATEGORIES.map(c => (
                     <button key={c} onClick={() => setFilterCategory(c)}
-                      className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${filterCategory === c ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                      className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${filterCategory === c ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
                       {CATEGORY_LABELS[c]}
                     </button>
                   ))}
@@ -442,12 +660,10 @@ export function Products({
                 <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Platform</p>
                 <div className="flex flex-wrap gap-1.5">
                   <button onClick={() => setFilterPlatform('all')}
-                    className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${filterPlatform === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
-                    All
-                  </button>
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${filterPlatform === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>All</button>
                   {ALL_PLATFORMS.map(p => (
                     <button key={p} onClick={() => setFilterPlatform(p)}
-                      className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${filterPlatform === p ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                      className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${filterPlatform === p ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
                       {p}
                     </button>
                   ))}
@@ -455,9 +671,7 @@ export function Products({
               </div>
               {activeFilters > 0 && (
                 <button onClick={() => { setFilterCategory('all'); setFilterPlatform('all'); }}
-                  className="text-xs text-red-500 font-medium hover:text-red-700">
-                  Clear all filters
-                </button>
+                  className="text-xs text-red-500 font-medium hover:text-red-700">Clear all filters</button>
               )}
             </div>
           )}
@@ -466,7 +680,6 @@ export function Products({
             Showing {filteredSorted.length} of {products.length} products
           </p>
 
-          {/* Product Cards */}
           <div className="space-y-3">
             {filteredSorted.length === 0 && (
               <div className={`${cardClass} border-dashed border-gray-200 dark:border-gray-700 p-8 text-center`}>
@@ -493,11 +706,11 @@ export function Products({
                     <Badge label={product.platform} className={PLATFORM_COLORS[product.platform]} />
                   </div>
                   <div className="grid grid-cols-3 gap-2 mb-3">
-                    <div className={statCellClass}>
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-2.5 text-center">
                       <p className="text-xs text-gray-500 dark:text-gray-400">Price</p>
                       <p className="text-sm font-bold text-gray-900 dark:text-white">{formatCurrency(product.price)}</p>
                     </div>
-                    <div className={statCellClass}>
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-2.5 text-center">
                       <p className="text-xs text-gray-500 dark:text-gray-400">Sold</p>
                       <p className="text-sm font-bold text-gray-900 dark:text-white">{product.unitsSold.toLocaleString()}</p>
                     </div>
@@ -507,17 +720,13 @@ export function Products({
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => setLoggingProduct(product)}
-                      className="flex-1 flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 rounded-xl py-2 text-xs font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-900/30 active:scale-95 transition-all"
-                    >
+                    <button onClick={() => setLoggingProduct(product)}
+                      className="flex-1 flex items-center justify-center gap-1.5 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 rounded-xl py-2 text-xs font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-900/30 active:scale-95 transition-all">
                       <PlusCircle size={13} />
                       Log Sale
                     </button>
-                    <button
-                      onClick={() => setEditingProduct(product)}
-                      className="flex items-center justify-center w-9 h-9 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 active:scale-95 transition-all"
-                    >
+                    <button onClick={() => setEditingProduct(product)}
+                      className="flex items-center justify-center w-9 h-9 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 active:scale-95 transition-all">
                       <Edit2 size={14} />
                     </button>
                     {isDeleting ? (
@@ -542,38 +751,6 @@ export function Products({
               );
             })}
           </div>
-
-          {/* Suggestion prompt at the bottom when products exist */}
-          <button
-            onClick={() => setShowSuggestions(v => !v)}
-            className="w-full flex items-center justify-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium py-2 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-          >
-            <Sparkles size={12} />
-            {showSuggestions ? 'Hide suggestions' : 'Need inspiration? View product suggestions'}
-          </button>
-          {showSuggestions && (
-            <div className="space-y-3">
-              {SUGGESTED_PRODUCTS.map(s => (
-                <div key={s.id} className="bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-indigo-200 dark:border-indigo-800 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap gap-1.5 mb-1.5">
-                        <Badge label={CATEGORY_LABELS[s.category]} className={CATEGORY_COLORS[s.category]} />
-                        <Badge label={s.platform} className={PLATFORM_COLORS[s.platform]} />
-                      </div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{s.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{s.description}</p>
-                      <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mt-1">Suggested: {formatCurrency(s.price)}</p>
-                    </div>
-                    <button onClick={() => handleUseSuggestion(s)}
-                      className="flex-shrink-0 flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-3 py-2 text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all">
-                      Use <ArrowRight size={12} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </>
       )}
 
