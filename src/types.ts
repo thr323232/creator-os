@@ -25,6 +25,13 @@ export type TabName = 'dashboard' | 'products' | 'guide' | 'resources';
 export type RoadmapStatus = 'idea' | 'planning' | 'in-progress' | 'ready-to-launch';
 export type SuggestionTag = 'trending' | 'high-demand' | 'beginner-friendly' | 'quick-win' | 'evergreen';
 
+export interface ProductReview {
+  id: string;
+  rating: number; // 1–5
+  quote?: string;
+  date: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -34,6 +41,7 @@ export interface Product {
   unitsSold: number;
   launchDate: string;
   status: ProductStatus;
+  reviews?: ProductReview[];
 }
 
 export interface SaleLog {
@@ -41,6 +49,12 @@ export interface SaleLog {
   productId: string;
   units: number;
   date: string;
+}
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
 }
 
 export interface RoadmapItem {
@@ -53,6 +67,7 @@ export interface RoadmapItem {
   description: string;
   status: RoadmapStatus;
   savedAt: string;
+  checklist?: ChecklistItem[];
 }
 
 export interface GuideIdea {

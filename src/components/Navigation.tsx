@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, Lightbulb, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Package, TrendingUp, Compass } from 'lucide-react';
 import type { TabName } from '../types';
 
 interface Props {
@@ -7,38 +7,43 @@ interface Props {
 }
 
 const TABS: { id: TabName; label: string; Icon: React.FC<{ size?: number; className?: string }> }[] = [
-  { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
+  { id: 'dashboard', label: 'Home', Icon: LayoutDashboard },
+  { id: 'resources', label: 'Earn', Icon: TrendingUp },
   { id: 'products', label: 'Products', Icon: Package },
-  { id: 'guide', label: 'Guide', Icon: Lightbulb },
-  { id: 'resources', label: 'Earn', Icon: BookOpen },
+  { id: 'guide', label: 'Guide', Icon: Compass },
 ];
 
 export function Navigation({ activeTab, onTabChange }: Props) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg">
-      <div className="max-w-2xl mx-auto flex">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200/80 dark:border-gray-800/80 shadow-xl shadow-black/5">
+      <div className="max-w-2xl mx-auto flex px-2">
         {TABS.map(({ id, label, Icon }) => {
           const isActive = activeTab === id;
           return (
             <button
               key={id}
               onClick={() => onTabChange(id)}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 px-1 transition-all duration-200 ${
+              className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 transition-all duration-200 relative`}
+            >
+              {/* Active pill background */}
+              {isActive && (
+                <span className="absolute inset-x-2 top-1.5 bottom-1.5 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30" />
+              )}
+              <Icon
+                size={20}
+                className={`relative z-10 transition-all duration-200 ${
+                  isActive
+                    ? 'text-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-400 dark:text-gray-500'
+                }`}
+              />
+              <span className={`relative z-10 text-[10px] font-semibold leading-tight transition-all duration-200 ${
                 isActive
                   ? 'text-indigo-600 dark:text-indigo-400'
-                  : 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
-              }`}
-            >
-              <Icon
-                size={22}
-                className={`transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}
-              />
-              <span className={`text-[10px] font-medium leading-tight ${isActive ? 'font-semibold' : ''}`}>
+                  : 'text-gray-400 dark:text-gray-500'
+              }`}>
                 {label}
               </span>
-              {isActive && (
-                <span className="w-4 h-0.5 rounded-full bg-indigo-600 dark:bg-indigo-400 mt-0.5" />
-              )}
             </button>
           );
         })}
