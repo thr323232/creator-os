@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import {
   CheckCircle2, Circle, ChevronDown, ChevronUp,
-  ExternalLink, DollarSign, Lightbulb, Search,
+  ExternalLink, PoundSterling, Lightbulb, Search,
   Users, Image, Copy, Check, Zap, Calendar, Hash, MessageSquare,
+  Printer, ShoppingCart, Link2, Calculator, Tag, ArrowRight,
 } from 'lucide-react';
 import type { PlatformInfo } from '../types';
 import {
@@ -12,8 +13,13 @@ import {
 import {
   HOOK_BANK, CAPTION_TEMPLATES, CONTENT_CALENDAR, HASHTAG_SETS,
 } from '../data/contentData';
+import {
+  POD_PLATFORMS, POD_CHECKLIST, POD_MARGIN_TIPS,
+  DROPSHIP_SELLING_PLATFORMS, DROPSHIP_SUPPLIERS, DROPSHIP_NICHES, DROPSHIP_CHECKLIST,
+  AFFILIATE_PROGRAMS, AFFILIATE_CONTENT_IDEAS, AFFILIATE_CHECKLIST,
+} from '../data/incomeStreamData';
 
-type ResourceTab = 'platforms' | 'tips' | 'content' | 'checklist';
+type ResourceTab = 'platforms' | 'tips' | 'content' | 'checklist' | 'pod' | 'dropship' | 'affiliate';
 
 const PLATFORM_ACCENT: Record<string, string> = {
   Etsy: 'from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-100 dark:border-orange-800/50',
@@ -448,6 +454,614 @@ function ContentTab() {
   );
 }
 
+// ── GENERIC CHECKLIST (reusable for POD / Dropship / Affiliate) ──────────────
+
+function InteractiveChecklist({ items }: {
+  items: { id: string; step: string; detail: string }[];
+}) {
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setChecked(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const progress = (checked.size / items.length) * 100;
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div className="px-4 pt-4 pb-3 border-b border-gray-50 dark:border-gray-800">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">Quick-Start Checklist</p>
+          <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{checked.size}/{items.length}</span>
+        </div>
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
+          <div className={`h-1.5 rounded-full transition-all duration-500 ${progress >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+            style={{ width: `${progress}%` }} />
+        </div>
+        {progress >= 100 && (
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1.5">🎉 You're ready to launch!</p>
+        )}
+      </div>
+      <div className="divide-y divide-gray-50 dark:divide-gray-800">
+        {items.map(item => {
+          const done = checked.has(item.id);
+          return (
+            <button key={item.id} onClick={() => toggle(item.id)}
+              className="w-full flex items-start gap-3 px-4 py-3.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              {done
+                ? <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                : <Circle size={18} className="text-gray-300 dark:text-gray-600 shrink-0 mt-0.5" />}
+              <div>
+                <p className={`text-sm font-medium leading-tight ${done ? 'line-through text-gray-400 dark:text-gray-600' : 'text-gray-800 dark:text-gray-200'}`}>
+                  {item.step}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 leading-relaxed">{item.detail}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {checked.size > 0 && checked.size < items.length && (
+        <div className="px-4 py-3 border-t border-gray-50 dark:border-gray-800">
+          <button onClick={() => setChecked(new Set())} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            Reset checklist
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── PRINT-ON-DEMAND TAB ───────────────────────────────────────────────────────
+
+function PodPlatformCard({ platform }: { platform: typeof POD_PLATFORMS[number] }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div className="p-4 cursor-pointer select-none" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-base font-bold text-gray-900 dark:text-white">{platform.emoji} {platform.name}</span>
+          {expanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{platform.tagline}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          <span className="text-[11px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg px-2 py-0.5 font-medium">{platform.fees}</span>
+          <span className="text-[11px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg px-2 py-0.5 font-medium">⏱ {platform.fulfillmentTime}</span>
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-gray-100 dark:border-gray-800 px-4 pb-4 pt-3 space-y-3">
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3">
+            <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 mb-0.5 uppercase tracking-wide">🇬🇧 UK Shipping</p>
+            <p className="text-xs text-emerald-700 dark:text-emerald-300">{platform.ukShipping}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">✅ Pros</p>
+            <ul className="space-y-1">{platform.pros.map((p, i) => (
+              <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5"><span className="text-emerald-500 mt-0.5">•</span>{p}</li>
+            ))}</ul>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-red-600 dark:text-red-400 mb-1">⚠️ Cons</p>
+            <ul className="space-y-1">{platform.cons.map((c, i) => (
+              <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5"><span className="text-red-400 mt-0.5">•</span>{c}</li>
+            ))}</ul>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Best for</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{platform.bestFor}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Products</p>
+            <div className="flex flex-wrap gap-1">
+              {platform.productTypes.map(t => (
+                <span key={t} className="text-[10px] bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-full">{t}</span>
+              ))}
+            </div>
+          </div>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500">Integrates with: {platform.integration}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PodMarginCalculator() {
+  const [baseCost, setBaseCost] = useState('');
+  const [sellingPrice, setSellingPrice] = useState('');
+  const [platformFee, setPlatformFee] = useState('6.5');
+
+  const base = parseFloat(baseCost) || 0;
+  const price = parseFloat(sellingPrice) || 0;
+  const fee = parseFloat(platformFee) || 0;
+  const feeAmount = price * (fee / 100);
+  const profit = price - base - feeAmount;
+  const margin = price > 0 ? (profit / price) * 100 : 0;
+  const healthy = margin >= 30;
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 space-y-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Calculator size={15} className="text-indigo-600 dark:text-indigo-400" />
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">Margin Calculator</p>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <div>
+          <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Base Cost (£)</label>
+          <input type="number" value={baseCost} onChange={e => setBaseCost(e.target.value)} placeholder="e.g. 8"
+            className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400" />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Sell Price (£)</label>
+          <input type="number" value={sellingPrice} onChange={e => setSellingPrice(e.target.value)} placeholder="e.g. 24"
+            className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400" />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Platform Fee %</label>
+          <input type="number" value={platformFee} onChange={e => setPlatformFee(e.target.value)} placeholder="e.g. 6.5"
+            className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400" />
+        </div>
+      </div>
+      {price > 0 && base > 0 && (
+        <div className={`rounded-xl p-3 ${healthy ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-xs font-semibold mb-0.5 ${healthy ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                {healthy ? '✅ Healthy margin' : '⚠️ Margin too low'}
+              </p>
+              <p className={`text-2xl font-bold ${healthy ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}`}>
+                {margin.toFixed(0)}%
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">Profit per sale</p>
+              <p className={`text-lg font-bold ${healthy ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}`}>
+                £{profit.toFixed(2)}
+              </p>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500">after £{feeAmount.toFixed(2)} fee</p>
+            </div>
+          </div>
+          {!healthy && profit > 0 && (
+            <p className="text-[11px] text-red-600 dark:text-red-400 mt-1.5">
+              Aim for 30%+ margin. Try raising price or using a cheaper print provider.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PrintOnDemandTab() {
+  const [section, setSection] = useState<'platforms' | 'calculator' | 'checklist'>('platforms');
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-900/20 dark:to-indigo-900/20 rounded-2xl border border-violet-100 dark:border-violet-800/50 p-4">
+        <p className="text-sm font-bold text-violet-900 dark:text-violet-200 mb-1">🖨️ Print-on-Demand</p>
+        <p className="text-xs text-violet-700 dark:text-violet-300 leading-relaxed">
+          Design once, sell forever — no stock, no upfront costs. Your designs are printed and shipped automatically when a customer orders.
+        </p>
+      </div>
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+        {([
+          { id: 'platforms', label: 'Platforms' },
+          { id: 'calculator', label: 'Margin Calc' },
+          { id: 'checklist', label: 'Checklist' },
+        ] as const).map(({ id, label }) => (
+          <button key={id} onClick={() => setSection(id)}
+            className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
+              section === id ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {section === 'platforms' && (
+        <div className="space-y-3">
+          {POD_PLATFORMS.map(p => <PodPlatformCard key={p.id} platform={p} />)}
+          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-100 dark:border-amber-800/50 p-4 space-y-2">
+            <p className="text-xs font-bold text-amber-800 dark:text-amber-300">💡 Margin Tips</p>
+            {POD_MARGIN_TIPS.map((tip, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <ArrowRight size={12} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700 dark:text-amber-300">{tip}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {section === 'calculator' && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Enter your costs to see your profit margin instantly. Aim for 30%+ to run a sustainable POD business.</p>
+          <PodMarginCalculator />
+        </div>
+      )}
+      {section === 'checklist' && <InteractiveChecklist items={POD_CHECKLIST}  />}
+    </div>
+  );
+}
+
+// ── DROPSHIPPING TAB ─────────────────────────────────────────────────────────
+
+function DropshipPlatformCard({ platform }: { platform: typeof DROPSHIP_SELLING_PLATFORMS[number] }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div className="p-4 cursor-pointer select-none" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-base font-bold text-gray-900 dark:text-white">{platform.emoji} {platform.name}</span>
+          {expanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{platform.tagline}</p>
+        <span className="mt-1.5 inline-block text-[11px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg px-2 py-0.5 font-medium">{platform.fees}</span>
+      </div>
+      {expanded && (
+        <div className="border-t border-gray-100 dark:border-gray-800 px-4 pb-4 pt-3 space-y-3">
+          <div>
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">✅ Pros</p>
+            <ul className="space-y-1">{platform.pros.map((p, i) => (
+              <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5"><span className="text-emerald-500 mt-0.5">•</span>{p}</li>
+            ))}</ul>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-red-600 dark:text-red-400 mb-1">⚠️ Cons</p>
+            <ul className="space-y-1">{platform.cons.map((c, i) => (
+              <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5"><span className="text-red-400 mt-0.5">•</span>{c}</li>
+            ))}</ul>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Best for</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{platform.bestFor}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropshipSupplierCard({ supplier }: { supplier: typeof DROPSHIP_SUPPLIERS[number] }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+      <div className="p-4 cursor-pointer select-none" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-bold text-gray-900 dark:text-white">{supplier.emoji} {supplier.name}</span>
+            {supplier.ukStock && (
+              <span className="text-[10px] font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-md">UK Stock</span>
+            )}
+          </div>
+          {expanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{supplier.origin}</p>
+        <div className="mt-1.5 flex gap-1.5 flex-wrap">
+          <span className="text-[11px] bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg px-2 py-0.5 font-medium">🚚 {supplier.avgShippingToUK}</span>
+          <span className="text-[11px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-lg px-2 py-0.5 font-medium">{supplier.minOrder}</span>
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-gray-100 dark:border-gray-800 px-4 pb-4 pt-3 space-y-3">
+          <div>
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1">✅ Pros</p>
+            <ul className="space-y-1">{supplier.pros.map((p, i) => (
+              <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5"><span className="text-emerald-500 mt-0.5">•</span>{p}</li>
+            ))}</ul>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-red-600 dark:text-red-400 mb-1">⚠️ Cons</p>
+            <ul className="space-y-1">{supplier.cons.map((c, i) => (
+              <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5"><span className="text-red-400 mt-0.5">•</span>{c}</li>
+            ))}</ul>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-0.5">Best for</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">{supplier.bestFor}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Categories</p>
+            <div className="flex flex-wrap gap-1">
+              {supplier.categories.map(c => (
+                <span key={c} className="text-[10px] bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-full">{c}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropshipProfitCalculator() {
+  const [supplierCost, setSupplierCost] = useState('');
+  const [shipping, setShipping] = useState('');
+  const [platformFee, setPlatformFee] = useState('12.8');
+  const [sellPrice, setSellPrice] = useState('');
+
+  const cost = parseFloat(supplierCost) || 0;
+  const ship = parseFloat(shipping) || 0;
+  const fee = parseFloat(platformFee) || 0;
+  const price = parseFloat(sellPrice) || 0;
+  const feeAmount = price * (fee / 100);
+  const profit = price - cost - ship - feeAmount;
+  const margin = price > 0 ? (profit / price) * 100 : 0;
+  const healthy = margin >= 25;
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 space-y-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Calculator size={15} className="text-indigo-600 dark:text-indigo-400" />
+        <p className="text-sm font-semibold text-gray-900 dark:text-white">Profit Calculator</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Supplier Cost (£)</label>
+          <input type="number" value={supplierCost} onChange={e => setSupplierCost(e.target.value)} placeholder="e.g. 5"
+            className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400" />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Shipping (£)</label>
+          <input type="number" value={shipping} onChange={e => setShipping(e.target.value)} placeholder="e.g. 2.50"
+            className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400" />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Platform Fee %</label>
+          <input type="number" value={platformFee} onChange={e => setPlatformFee(e.target.value)} placeholder="e.g. 12.8"
+            className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400" />
+        </div>
+        <div>
+          <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Sell Price (£)</label>
+          <input type="number" value={sellPrice} onChange={e => setSellPrice(e.target.value)} placeholder="e.g. 19.99"
+            className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400" />
+        </div>
+      </div>
+      {price > 0 && cost > 0 && (
+        <div className={`rounded-xl p-3 ${healthy ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className={`text-xs font-semibold mb-0.5 ${healthy ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-700 dark:text-red-400'}`}>
+                {healthy ? '✅ Viable margin' : '⚠️ Margin too low'}
+              </p>
+              <p className={`text-2xl font-bold ${healthy ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-600 dark:text-red-400'}`}>
+                {margin.toFixed(0)}%
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] text-gray-500 dark:text-gray-400">Profit per sale</p>
+              <p className={`text-lg font-bold ${profit > 0 ? (healthy ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-600 dark:text-amber-400') : 'text-red-600 dark:text-red-400'}`}>
+                £{profit.toFixed(2)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropshippingTab() {
+  const [section, setSection] = useState<'platforms' | 'suppliers' | 'calculator' | 'niches' | 'checklist'>('platforms');
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl border border-blue-100 dark:border-blue-800/50 p-4">
+        <p className="text-sm font-bold text-blue-900 dark:text-blue-200 mb-1">🛒 Dropshipping</p>
+        <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+          Sell physical products without holding stock. When a customer orders, your supplier ships directly to them. You keep the margin.
+        </p>
+      </div>
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+        {([
+          { id: 'platforms', label: 'Where to Sell' },
+          { id: 'suppliers', label: 'UK Suppliers' },
+          { id: 'calculator', label: 'Profit Calc' },
+          { id: 'niches', label: 'Niche Ideas' },
+          { id: 'checklist', label: 'Checklist' },
+        ] as const).map(({ id, label }) => (
+          <button key={id} onClick={() => setSection(id)}
+            className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
+              section === id ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {section === 'platforms' && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Choose where you'll sell your products. Each platform has different fees, audiences, and traffic levels.</p>
+          {DROPSHIP_SELLING_PLATFORMS.map(p => <DropshipPlatformCard key={p.id} platform={p} />)}
+        </div>
+      )}
+      {section === 'suppliers' && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500 dark:text-gray-400">UK-friendly suppliers — tap to compare. Always order a sample before listing. 🇬🇧 = UK stock available.</p>
+          {DROPSHIP_SUPPLIERS.map(s => <DropshipSupplierCard key={s.id} supplier={s} />)}
+        </div>
+      )}
+      {section === 'calculator' && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Calculate your real profit after supplier cost, shipping, and platform fees. Aim for 25–35%+ margin.</p>
+          <DropshipProfitCalculator />
+        </div>
+      )}
+      {section === 'niches' && (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Strong dropshipping niches right now. Pick one and go deep — niche stores consistently outperform general stores.</p>
+          <div className="flex flex-wrap gap-2">
+            {DROPSHIP_NICHES.map(niche => (
+              <span key={niche} className="flex items-center gap-1 text-sm bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-full shadow-sm">
+                <Tag size={11} className="text-indigo-400" />
+                {niche}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {section === 'checklist' && <InteractiveChecklist items={DROPSHIP_CHECKLIST}  />}
+    </div>
+  );
+}
+
+// ── AFFILIATE TAB ─────────────────────────────────────────────────────────────
+
+function AffiliateTab() {
+  const [section, setSection] = useState<'programs' | 'estimator' | 'content' | 'checklist'>('programs');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [monthlyAudience, setMonthlyAudience] = useState('');
+  const [conversionRate, setConversionRate] = useState('1');
+  const [avgCommission, setAvgCommission] = useState('15');
+
+  const categories = ['all', 'software', 'physical', 'digital', 'education'];
+  const categoryLabels: Record<string, string> = {
+    all: 'All', software: 'Software', physical: 'Physical', digital: 'Digital', education: 'Education',
+  };
+
+  const filteredPrograms = AFFILIATE_PROGRAMS.filter(p => categoryFilter === 'all' || p.category === categoryFilter);
+
+  const audience = parseFloat(monthlyAudience) || 0;
+  const cvr = parseFloat(conversionRate) || 0;
+  const commission = parseFloat(avgCommission) || 0;
+  const monthlyClicks = audience * 0.03;
+  const sales = monthlyClicks * (cvr / 100);
+  const lowIncome = sales * commission * 0.5;
+  const highIncome = sales * commission * 1.5;
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/50 p-4">
+        <p className="text-sm font-bold text-emerald-900 dark:text-emerald-200 mb-1">🔗 Affiliate Marketing</p>
+        <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
+          Recommend tools and products you already use. Earn a commission every time someone signs up or buys through your link — no product creation needed.
+        </p>
+      </div>
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+        {([
+          { id: 'programs', label: 'Programs' },
+          { id: 'estimator', label: 'Income Est.' },
+          { id: 'content', label: 'Content Ideas' },
+          { id: 'checklist', label: 'Checklist' },
+        ] as const).map(({ id, label }) => (
+          <button key={id} onClick={() => setSection(id)}
+            className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
+              section === id ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+            }`}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {section === 'programs' && (
+        <div className="space-y-3">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setCategoryFilter(cat)}
+                className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
+                  categoryFilter === cat ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                }`}>
+                {categoryLabels[cat]}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-3">
+            {filteredPrograms.map(prog => (
+              <div key={prog.id} className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4">
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">{prog.emoji} {prog.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded-md">
+                        {prog.categoryLabel}
+                      </span>
+                      {prog.recurring && (
+                        <span className="text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-md">
+                          🔄 Recurring
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">{prog.commissionRate}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{prog.cookieDays}d cookie</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 text-[11px] text-gray-500 dark:text-gray-400">
+                  <span>Min payout: <span className="font-medium text-gray-700 dark:text-gray-300">{prog.paymentThreshold}</span></span>
+                  <span>Via: <span className="font-medium text-gray-700 dark:text-gray-300">{prog.network}</span></span>
+                </div>
+                <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">Best for: {prog.bestFor}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {section === 'estimator' && (
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Estimate your monthly affiliate income based on your audience size. These are indicative ranges — actual results vary by niche and content quality.</p>
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Calculator size={15} className="text-indigo-600 dark:text-indigo-400" />
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Income Estimator</p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Monthly audience / followers</label>
+                <input type="number" value={monthlyAudience} onChange={e => setMonthlyAudience(e.target.value)} placeholder="e.g. 5000"
+                  className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400" />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Estimated click-to-sale conversion rate (%)</label>
+                <input type="number" value={conversionRate} onChange={e => setConversionRate(e.target.value)} placeholder="e.g. 1"
+                  className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400" />
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Typical range: 0.5–3%. Software tends to convert higher.</p>
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1 block">Average commission per sale (£)</label>
+                <input type="number" value={avgCommission} onChange={e => setAvgCommission(e.target.value)} placeholder="e.g. 15"
+                  className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-indigo-400" />
+              </div>
+            </div>
+            {audience > 0 && (
+              <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-4">
+                <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 mb-3">Estimated Monthly Income</p>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">£{lowIncome.toFixed(0)} – £{highIncome.toFixed(0)}</p>
+                    <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">per month (estimated range)</p>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-indigo-100 dark:border-indigo-800/50 space-y-1 text-[11px] text-indigo-600 dark:text-indigo-400">
+                  <p>~{Math.round(monthlyClicks)} clicks/mo (assuming 3% link click rate)</p>
+                  <p>~{sales.toFixed(1)} sales/mo at {cvr}% conversion</p>
+                  <p className="text-[10px] text-indigo-500 dark:text-indigo-500 mt-1">Scale by promoting multiple programs and growing your audience.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {section === 'content' && (
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Content ideas that naturally incorporate affiliate links. These formats consistently outperform direct promotion.</p>
+          {AFFILIATE_CONTENT_IDEAS.map(group => (
+            <div key={group.category} className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4">
+              <p className="text-sm font-bold text-gray-900 dark:text-white mb-3">{group.category}</p>
+              <div className="space-y-2">
+                {group.hooks.map((hook, i) => (
+                  <div key={i} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 flex items-start justify-between gap-2">
+                    <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed flex-1">{hook}</p>
+                    <CopyButton text={hook} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {section === 'checklist' && <InteractiveChecklist items={AFFILIATE_CHECKLIST}  />}
+    </div>
+  );
+}
+
 export function Resources() {
   const [activeTab, setActiveTab] = useState<ResourceTab>('platforms');
 
@@ -456,28 +1070,30 @@ export function Resources() {
     { id: 'tips', label: 'Tips', icon: Lightbulb },
     { id: 'content', label: 'Content', icon: Zap },
     { id: 'checklist', label: 'Checklist', icon: CheckCircle2 },
+    { id: 'pod', label: 'Print-on-Demand', icon: Printer },
+    { id: 'dropship', label: 'Dropshipping', icon: ShoppingCart },
+    { id: 'affiliate', label: 'Affiliate', icon: Link2 },
   ];
 
   return (
     <div className="px-4 pt-4 pb-6 space-y-4">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Resources</h1>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Platforms, tips, content ideas & your launch checklist</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Earn</h1>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Platforms, content tools, and 3 more ways to earn</p>
       </div>
 
-      {/* Internal tab strip */}
-      <div className="flex gap-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl p-1">
+      {/* Internal tab strip — scrollable */}
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button key={id} onClick={() => setActiveTab(id)}
-            className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex-shrink-0 flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-semibold transition-all ${
               activeTab === id
-                ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700'
             }`}>
             <Icon size={12} />
-            <span className="hidden sm:inline">{label}</span>
-            <span className="sm:hidden">{label.split(' ')[0]}</span>
+            {label}
           </button>
         ))}
       </div>
@@ -514,7 +1130,7 @@ export function Resources() {
       {/* Tips */}
       {activeTab === 'tips' && (
         <div className="space-y-3">
-          <TipSection title="Pricing Strategy" icon={DollarSign} tips={PRICING_TIPS} defaultOpen />
+          <TipSection title="Pricing Strategy" icon={PoundSterling} tips={PRICING_TIPS} defaultOpen />
           <TipSection title="Product Mockups" icon={Image} tips={MOCKUP_TIPS} />
           <TipSection title="SEO for Listings" icon={Search} tips={SEO_TIPS} />
           <TipSection title="Growing Your Audience" icon={Users} tips={AUDIENCE_TIPS} />
@@ -526,6 +1142,15 @@ export function Resources() {
 
       {/* Launch Checklist */}
       {activeTab === 'checklist' && <LaunchChecklistSection />}
+
+      {/* Print-on-Demand */}
+      {activeTab === 'pod' && <PrintOnDemandTab />}
+
+      {/* Dropshipping */}
+      {activeTab === 'dropship' && <DropshippingTab />}
+
+      {/* Affiliate Marketing */}
+      {activeTab === 'affiliate' && <AffiliateTab />}
     </div>
   );
 }

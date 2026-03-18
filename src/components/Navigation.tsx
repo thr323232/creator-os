@@ -10,7 +10,7 @@ const TABS: { id: TabName; label: string; Icon: React.FC<{ size?: number; classN
   { id: 'dashboard', label: 'Dashboard', Icon: LayoutDashboard },
   { id: 'products', label: 'Products', Icon: Package },
   { id: 'guide', label: 'Guide', Icon: Lightbulb },
-  { id: 'resources', label: 'Resources', Icon: BookOpen },
+  { id: 'resources', label: 'Earn', Icon: BookOpen },
 ];
 
 export function Navigation({ activeTab, onTabChange }: Props) {

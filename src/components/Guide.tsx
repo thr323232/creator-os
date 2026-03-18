@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import {
-  Flame, ChevronDown, ChevronUp, Star, Clock, DollarSign, Wrench, X,
+  Flame, ChevronDown, ChevronUp, Star, Clock, PoundSterling, Wrench, X,
   Bookmark, BookmarkCheck,
 } from 'lucide-react';
 import type { GuideIdea, Category, Difficulty, RoadmapItem, PlatformName } from '../types';
@@ -93,7 +93,7 @@ function IdeaCard({ idea, isSaved, onSave, onUnsave }: {
             <span className="text-[10px] text-gray-400 dark:text-gray-500">demand</span>
           </div>
           <div className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400">
-            <DollarSign size={11} />
+            <PoundSterling size={11} />
             <span className="text-xs font-semibold">£{idea.pricingMin}–£{idea.pricingMax}</span>
           </div>
           <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">

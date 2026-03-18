@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, CartesianGrid,
 } from 'recharts';
 import {
-  DollarSign, Package, Star, Download,
+  PoundSterling, Package, Star, Download,
   BarChart2, TrendingUp, Zap, ArrowUp, Bookmark, BookmarkCheck, ArrowRight,
 } from 'lucide-react';
 import type { Product, SaleLog, ChartDataPoint, RoadmapItem, ProductSuggestion } from '../types';
@@ -271,7 +271,7 @@ export function Dashboard({
         <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Overview</p>
         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
           <SummaryCard label="Total Revenue" value={formatCurrency(totalRevenue)} sub="All time"
-            icon={DollarSign} color="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400" />
+            icon={PoundSterling} color="bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400" />
           <SummaryCard label="Products Listed" value={String(liveProducts)} sub={`${products.length} total`}
             icon={Package} color="bg-violet-50 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400" />
           <SummaryCard
@@ -338,7 +338,7 @@ export function Dashboard({
           </div>
           <div className="bg-white dark:bg-gray-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800">
             <div className="flex items-center gap-2 mb-1">
-              <DollarSign size={14} className="text-violet-500 dark:text-violet-400" />
+              <PoundSterling size={14} className="text-violet-500 dark:text-violet-400" />
               <p className="text-xs text-gray-500 dark:text-gray-400">Rev / Product</p>
             </div>
             <p className="text-xl font-bold text-gray-900 dark:text-white">{formatCurrency(revenuePerProduct)}</p>
