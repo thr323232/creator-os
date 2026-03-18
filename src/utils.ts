@@ -68,6 +68,77 @@ export const ALL_STATUSES: ProductStatus[] = ['live', 'draft', 'retired'];
 
 export const DIFFICULTY_LEVELS: Difficulty[] = ['beginner', 'intermediate', 'advanced'];
 
+// SEO title suggestions per category + platform
+const SEO_PATTERNS: Partial<Record<Category, string[]>> = {
+  template: [
+    '{name} | Editable Canva Template | Instant Digital Download',
+    '{name} Template Pack | Canva | Social Media Bundle | Commercial Use',
+    'Editable {name} Canva Template | Instant Access | Digital File',
+  ],
+  'notion-template': [
+    '{name} | Notion Template | Instant Digital Download',
+    '{name} Notion Dashboard | Productivity Template | Digital Planner',
+    'Aesthetic {name} | Notion Template | Life OS | Instant Download',
+  ],
+  printable: [
+    '{name} | Printable | Instant Download | Letter + A4',
+    '{name} Printable Set | Digital Print at Home | Instant PDF Download',
+    'Editable {name} | Printable Digital Download | Commercial Use',
+  ],
+  preset: [
+    '{name} | Lightroom Preset Pack | Mobile + Desktop DNG | Instant Download',
+    '{name} Preset Bundle | 10 Lightroom Presets | Photo Editing | Instant Download',
+    '{name} Mobile Presets | Lightroom DNG | Instagram Aesthetic | Instant Download',
+  ],
+  ebook: [
+    '{name} | Digital Ebook | Instant Download | Beginner Friendly Guide',
+    '{name} Ebook | Step-by-Step Guide | PDF Instant Download',
+    'The {name} Guide | Digital Ebook | Instant Access | PDF Download',
+  ],
+  course: [
+    '{name} | Digital Course | Instant Access | Video + PDF Included',
+    '{name} Online Course | Step-by-Step | Instant Digital Download',
+    'Learn {name} | Digital Course Bundle | Lifetime Access | Instant Download',
+  ],
+  font: [
+    '{name} Font | Commercial Use | OTF + TTF | Instant Download',
+    '{name} Font Duo | Hand Lettered | Commercial License | Instant Download',
+    '{name} Display Font | OTF TTF | Commercial Use | Instant Digital Download',
+  ],
+  'digital-art': [
+    '{name} | Digital Art Print | Instant Download | Printable Wall Art',
+    '{name} Printable Art | Instant Digital Download | Multiple Sizes',
+    '{name} Art Print | Digital Illustration | Instant Download | Wall Decor',
+  ],
+  audio: [
+    '{name} | Royalty-Free Audio | Instant Download | Commercial Use',
+    '{name} Sound Pack | Royalty Free | Instant Digital Download',
+    '{name} Music | Royalty-Free License | Instant Download | Commercial Use',
+  ],
+  other: [
+    '{name} | Digital Product | Instant Download',
+    '{name} Bundle | Digital File | Instant Access',
+    'The {name} | Digital Download | Instant Access',
+  ],
+};
+
+const PLATFORM_SUFFIX: Partial<Record<PlatformName, string>> = {
+  Etsy: ' | Etsy Digital Download',
+  'Creative Market': ' | Creative Market',
+  Gumroad: '',
+  Payhip: '',
+  Lemonsqueezy: '',
+  Shopify: '',
+  'Personal Site': '',
+};
+
+export function getSeoTitleSuggestions(name: string, category: Category, platform: PlatformName): string[] {
+  const base = name.trim() || 'Your Product';
+  const patterns = SEO_PATTERNS[category] || SEO_PATTERNS.other!;
+  const suffix = PLATFORM_SUFFIX[platform] ?? '';
+  return patterns.map(p => p.replace('{name}', base) + suffix);
+}
+
 export const TOOL_OPTIONS = [
   'Canva', 'Figma', 'Notion', 'Adobe Illustrator', 'Adobe InDesign',
   'Adobe Lightroom', 'Procreate', 'Google Sheets', 'GarageBand',

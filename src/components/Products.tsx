@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   Plus, Edit2, Trash2, Target, Filter, Package,
   ChevronDown, ChevronUp, X, Check, PlusCircle, ArrowRight, Sparkles,
-  Bookmark, BookmarkCheck, MapPin, ChevronRight,
+  Bookmark, BookmarkCheck, MapPin, ChevronRight, CheckCircle2, Circle,
+  Star, MessageSquare, Lightbulb,
 } from 'lucide-react';
 import type {
   Product, SaleLog, Category, PlatformName, ProductStatus,
@@ -11,7 +12,7 @@ import type {
 import {
   formatCurrency, CATEGORY_LABELS, CATEGORY_COLORS,
   PLATFORM_COLORS, STATUS_COLORS, ALL_CATEGORIES,
-  ALL_PLATFORMS, ALL_STATUSES,
+  ALL_PLATFORMS, ALL_STATUSES, getSeoTitleSuggestions,
 } from '../utils';
 import { SUGGESTED_PRODUCTS } from '../data/suggestionsData';
 
@@ -22,6 +23,7 @@ interface NewRoadmapData {
   platform: PlatformName;
   price: number;
   description: string;
+  checklist?: { id: string; text: string; done: boolean }[];
 }
 
 interface Props {
@@ -38,6 +40,9 @@ interface Props {
   onRemoveFromRoadmap: (id: string) => void;
   onUpdateRoadmapStatus: (id: string, status: RoadmapStatus) => void;
   onStartBuilding: (item: RoadmapItem) => void;
+  onToggleChecklistItem: (roadmapId: string, checklistItemId: string) => void;
+  onAddReview: (productId: string, data: { rating: number; quote?: string }) => void;
+  onDeleteReview: (productId: string, reviewId: string) => void;
   pendingTemplate: Partial<Omit<Product, 'id'>> | null;
   onClearPendingTemplate: () => void;
 }
@@ -77,7 +82,6 @@ const EMPTY_FORM: Omit<Product, 'id'> = {
   status: 'draft',
 };
 
-// Unique categories in suggestions
 const SUGGESTION_CATEGORIES = ['all', ...new Set(SUGGESTED_PRODUCTS.map(s => s.category))] as (Category | 'all')[];
 
 function Badge({ label, className }: { label: string; className: string }) {
@@ -139,12 +143,98 @@ function GoalProgress({ goal, currentRevenue, onSetGoal }: {
   );
 }
 
+// ── ROADMAP ITEM CHECKLIST ──────────────────────────────────────────────────────
+function RoadmapChecklist({ item, onToggle }: {
+  item: RoadmapItem;
+  onToggle: (checklistItemId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const checklist = item.checklist;
+
+  if (!checklist || checklist.length === 0) {
+    return (
+      <div className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+        <Lightbulb size={11} />
+        <span>Save this idea via the Guide tab to get a step-by-step launch plan.</span>
+      </div>
+    );
+  }
+
+  const doneCount = checklist.filter(c => c.done).length;
+  const total = checklist.length;
+  const pct = Math.round((doneCount / total) * 100);
+
+  return (
+    <div className="mt-2.5">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
+      >
+        {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        Steps ({doneCount}/{total})
+        <span className="text-gray-400 dark:text-gray-500 font-normal">{pct}% done</span>
+      </button>
+
+      {open && (
+        <div className="mt-2 space-y-1">
+          <div className="bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-2">
+            <div className="bg-indigo-500 rounded-full h-1.5 transition-all duration-500"
+              style={{ width: `${pct}%` }} />
+          </div>
+          {checklist.map(ci => (
+            <button
+              key={ci.id}
+              onClick={() => onToggle(ci.id)}
+              className="w-full flex items-start gap-2 text-left py-1 group"
+            >
+              {ci.done
+                ? <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                : <Circle size={14} className="text-gray-300 dark:text-gray-600 flex-shrink-0 mt-0.5 group-hover:text-indigo-400" />}
+              <span className={`text-xs leading-relaxed ${ci.done ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
+                {ci.text}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── STATUS PROGRESS BAR ─────────────────────────────────────────────────────────
+function StatusProgressBar({ status }: { status: RoadmapStatus }) {
+  const steps = ROADMAP_STATUSES;
+  const currentIdx = steps.findIndex(s => s.value === status);
+  return (
+    <div className="flex items-center gap-1 mt-2">
+      {steps.map((s, i) => (
+        <div key={s.value} className="flex items-center gap-1 flex-1">
+          <div className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold flex-1 justify-center transition-all ${
+            i === currentIdx
+              ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300'
+              : i < currentIdx
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600'
+          }`}>
+            <span>{s.emoji}</span>
+            <span className="hidden xs:inline ml-0.5">{s.label}</span>
+          </div>
+          {i < steps.length - 1 && (
+            <div className={`h-0.5 w-2 flex-shrink-0 rounded-full ${i < currentIdx ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-gray-700'}`} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── ROADMAP SECTION ────────────────────────────────────────────────────────────
-function RoadmapSection({ items, onRemove, onUpdateStatus, onStartBuilding }: {
+function RoadmapSection({ items, onRemove, onUpdateStatus, onStartBuilding, onToggleChecklistItem }: {
   items: RoadmapItem[];
   onRemove: (id: string) => void;
   onUpdateStatus: (id: string, status: RoadmapStatus) => void;
   onStartBuilding: (item: RoadmapItem) => void;
+  onToggleChecklistItem: (roadmapId: string, checklistItemId: string) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [filter, setFilter] = useState<RoadmapStatus | 'all'>('all');
@@ -195,6 +285,8 @@ function RoadmapSection({ items, onRemove, onUpdateStatus, onStartBuilding }: {
             <div className="divide-y divide-gray-50 dark:divide-gray-800">
               {filtered.map(item => {
                 const meta = statusMeta(item.status);
+                const doneCount = item.checklist?.filter(c => c.done).length ?? 0;
+                const totalSteps = item.checklist?.length ?? 0;
                 return (
                   <div key={item.id} className="px-4 py-3">
                     <div className="flex items-start gap-2">
@@ -202,6 +294,11 @@ function RoadmapSection({ items, onRemove, onUpdateStatus, onStartBuilding }: {
                         <div className="flex items-center gap-2 flex-wrap mb-0.5">
                           <Badge label={CATEGORY_LABELS[item.category]} className={CATEGORY_COLORS[item.category]} />
                           <Badge label={item.platform} className={PLATFORM_COLORS[item.platform]} />
+                          {totalSteps > 0 && (
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-900/20 px-1.5 py-0.5 rounded-full">
+                              {doneCount}/{totalSteps} steps
+                            </span>
+                          )}
                         </div>
                         <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">{item.name}</p>
                         <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-0.5">{formatCurrency(item.price)}</p>
@@ -211,8 +308,12 @@ function RoadmapSection({ items, onRemove, onUpdateStatus, onStartBuilding }: {
                         <X size={14} />
                       </button>
                     </div>
+
+                    {/* 4-step status progress bar */}
+                    <StatusProgressBar status={item.status} />
+
+                    {/* Status + Start Building */}
                     <div className="flex items-center gap-2 mt-2.5">
-                      {/* Status pill / dropdown */}
                       <div className="relative">
                         <button onClick={() => setStatusMenuOpen(statusMenuOpen === item.id ? null : item.id)}
                           className={`flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full transition-all ${meta.color}`}>
@@ -237,6 +338,12 @@ function RoadmapSection({ items, onRemove, onUpdateStatus, onStartBuilding }: {
                         Start Building <ArrowRight size={10} />
                       </button>
                     </div>
+
+                    {/* Per-item checklist */}
+                    <RoadmapChecklist
+                      item={item}
+                      onToggle={checklistItemId => onToggleChecklistItem(item.id, checklistItemId)}
+                    />
                   </div>
                 );
               })}
@@ -285,7 +392,6 @@ function InspirationBoard({ roadmapItems, onSaveToRoadmap, onUseTemplate, defaul
 
       {open && (
         <div className="border-t border-gray-50 dark:border-gray-800">
-          {/* Category filter */}
           <div className="px-4 pt-3 pb-1">
             <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Category</p>
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
@@ -302,7 +408,6 @@ function InspirationBoard({ roadmapItems, onSaveToRoadmap, onUseTemplate, defaul
             </div>
           </div>
 
-          {/* Tag filter */}
           <div className="px-4 pt-1 pb-3">
             <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2">Filter by</p>
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
@@ -325,7 +430,6 @@ function InspirationBoard({ roadmapItems, onSaveToRoadmap, onUseTemplate, defaul
             </p>
           </div>
 
-          {/* Suggestion cards */}
           <div className="px-3 pb-4 space-y-2.5">
             {filtered.map(s => {
               const saved = isSaved(s.id);
@@ -374,6 +478,54 @@ function InspirationBoard({ roadmapItems, onSaveToRoadmap, onUseTemplate, defaul
   );
 }
 
+// ── SEO TITLE SUGGESTIONS ───────────────────────────────────────────────────────
+function SeoSuggestions({ name, category, platform, onUseTitle }: {
+  name: string; category: Category; platform: PlatformName; onUseTitle: (t: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const suggestions = getSeoTitleSuggestions(name, category, platform);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(text);
+    setTimeout(() => setCopied(null), 1500);
+  };
+
+  return (
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700"
+      >
+        <Sparkles size={12} />
+        SEO title ideas
+        {open ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          {suggestions.map((s, i) => (
+            <div key={i} className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-2.5 flex items-start gap-2">
+              <p className="flex-1 text-xs text-indigo-800 dark:text-indigo-200 leading-relaxed">{s}</p>
+              <div className="flex gap-1 flex-shrink-0">
+                <button type="button" onClick={() => handleCopy(s)}
+                  className="text-[10px] bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-lg font-medium">
+                  {copied === s ? '✓' : 'Copy'}
+                </button>
+                <button type="button" onClick={() => onUseTitle(s)}
+                  className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-lg font-medium">
+                  Use
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── PRODUCT FORM ───────────────────────────────────────────────────────────────
 function ProductForm({
   initial, onSave, onClose, title,
@@ -399,17 +551,23 @@ function ProductForm({
   const labelClass = 'block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-4 pt-4 pb-20 sm:pb-4">
       <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-gray-800">
           <h2 className="text-base font-bold text-gray-900 dark:text-white">{title}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><X size={20} /></button>
         </div>
-        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[75vh] p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[70vh] p-5 space-y-4">
           <div>
             <label className={labelClass}>Product Name *</label>
             <input type="text" value={form.name} onChange={e => set('name', e.target.value)}
               placeholder="e.g. Canva Social Media Bundle" required className={inputClass} />
+            <SeoSuggestions
+              name={form.name}
+              category={form.category}
+              platform={form.platform}
+              onUseTitle={t => set('name', t)}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -468,7 +626,7 @@ function LogSaleModal({ product, onLog, onClose }: {
   const inputClass = 'w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-4 pt-4 pb-20 sm:pb-4">
       <div className="bg-white dark:bg-gray-900 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-gray-100 dark:border-gray-800">
           <h2 className="text-base font-bold text-gray-900 dark:text-white">Log a Sale</h2>
@@ -502,11 +660,117 @@ function LogSaleModal({ product, onLog, onClose }: {
   );
 }
 
+// ── REVIEW SECTION ─────────────────────────────────────────────────────────────
+function ReviewSection({ product, onAdd, onDelete }: {
+  product: Product;
+  onAdd: (data: { rating: number; quote?: string }) => void;
+  onDelete: (reviewId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [addingReview, setAddingReview] = useState(false);
+  const [newRating, setNewRating] = useState(5);
+  const [newQuote, setNewQuote] = useState('');
+
+  const reviews = product.reviews || [];
+  const avgRating = reviews.length > 0
+    ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length
+    : 0;
+
+  const handleSave = () => {
+    onAdd({ rating: newRating, quote: newQuote.trim() || undefined });
+    setNewQuote('');
+    setNewRating(5);
+    setAddingReview(false);
+  };
+
+  return (
+    <div className="border-t border-gray-50 dark:border-gray-800 pt-3 mt-3">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+      >
+        <MessageSquare size={13} />
+        Reviews
+        {reviews.length > 0 && (
+          <span className="flex items-center gap-0.5">
+            <Star size={10} className="fill-amber-400 text-amber-400" />
+            <span className="text-amber-600 dark:text-amber-400">{avgRating.toFixed(1)}</span>
+            <span className="text-gray-400 dark:text-gray-500">({reviews.length})</span>
+          </span>
+        )}
+        {open ? <ChevronUp size={11} className="ml-auto" /> : <ChevronDown size={11} className="ml-auto" />}
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-3">
+          {reviews.map(r => (
+            <div key={r.id} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-0.5">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <Star key={i} size={11}
+                      className={i <= r.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-200 dark:text-gray-700 fill-gray-200 dark:fill-gray-700'} />
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500">{r.date}</span>
+                  <button onClick={() => onDelete(r.id)}
+                    className="text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors">
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+              {r.quote && <p className="text-xs text-gray-600 dark:text-gray-400 italic leading-relaxed">"{r.quote}"</p>}
+            </div>
+          ))}
+
+          {addingReview ? (
+            <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-xl p-3 space-y-2.5">
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Add review</p>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <button key={i} type="button" onClick={() => setNewRating(i)}>
+                    <Star size={18}
+                      className={i <= newRating ? 'fill-amber-400 text-amber-400' : 'text-gray-300 dark:text-gray-600 fill-gray-300 dark:fill-gray-600'} />
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={newQuote}
+                onChange={e => setNewQuote(e.target.value)}
+                placeholder="Quote or note (optional)"
+                rows={2}
+                className="w-full border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-400"
+              />
+              <div className="flex gap-2">
+                <button onClick={handleSave}
+                  className="flex-1 bg-indigo-600 text-white rounded-lg py-1.5 text-xs font-semibold">
+                  Save Review
+                </button>
+                <button onClick={() => setAddingReview(false)}
+                  className="text-gray-400 rounded-lg px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setAddingReview(true)}
+              className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-700">
+              <PlusCircle size={13} /> Add a review
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 export function Products({
   products, saleLogs, monthlyGoal,
   onAddProduct, onEditProduct, onDeleteProduct, onLogSale, onSetGoal,
   roadmapItems, onSaveToRoadmap, onRemoveFromRoadmap, onUpdateRoadmapStatus, onStartBuilding,
+  onToggleChecklistItem, onAddReview, onDeleteReview,
   pendingTemplate, onClearPendingTemplate,
 }: Props) {
   const [showForm, setShowForm] = useState(false);
@@ -519,7 +783,6 @@ export function Products({
   const [showFilters, setShowFilters] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Trigger form open when a pending template is set from App (e.g. Start Building)
   useEffect(() => {
     if (pendingTemplate) {
       setFormInitial({ ...EMPTY_FORM, ...pendingTemplate });
@@ -591,17 +854,18 @@ export function Products({
       {/* Monthly Goal */}
       <GoalProgress goal={monthlyGoal} currentRevenue={revenueThisMonth} onSetGoal={onSetGoal} />
 
-      {/* ── ROADMAP (always visible when has items) ── */}
+      {/* ── ROADMAP ── */}
       {roadmapItems.length > 0 && (
         <RoadmapSection
           items={roadmapItems}
           onRemove={onRemoveFromRoadmap}
           onUpdateStatus={onUpdateRoadmapStatus}
           onStartBuilding={onStartBuilding}
+          onToggleChecklistItem={onToggleChecklistItem}
         />
       )}
 
-      {/* ── INSPIRATION BOARD (always visible) ── */}
+      {/* ── INSPIRATION BOARD ── */}
       <InspirationBoard
         roadmapItems={roadmapItems}
         onSaveToRoadmap={onSaveToRoadmap}
@@ -616,7 +880,6 @@ export function Products({
             <p className="text-sm font-bold text-gray-900 dark:text-white">Your Products</p>
           </div>
 
-          {/* Filter / Sort Bar */}
           <div className="flex items-center gap-2">
             <button onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium transition-all ${
@@ -747,6 +1010,13 @@ export function Products({
                       </button>
                     )}
                   </div>
+
+                  {/* Review section */}
+                  <ReviewSection
+                    product={product}
+                    onAdd={data => onAddReview(product.id, data)}
+                    onDelete={reviewId => onDeleteReview(product.id, reviewId)}
+                  />
                 </div>
               );
             })}

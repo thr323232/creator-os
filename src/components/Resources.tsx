@@ -18,8 +18,10 @@ import {
   DROPSHIP_SELLING_PLATFORMS, DROPSHIP_SUPPLIERS, DROPSHIP_NICHES, DROPSHIP_CHECKLIST,
   AFFILIATE_PROGRAMS, AFFILIATE_CONTENT_IDEAS, AFFILIATE_CHECKLIST,
 } from '../data/incomeStreamData';
+import { PRODUCT_WORKFLOWS } from '../data/contentWorkflowData';
+import type { ProductWorkflow, WorkflowPlatform, IncomeStreamType } from '../data/contentWorkflowData';
 
-type ResourceTab = 'platforms' | 'tips' | 'content' | 'checklist' | 'pod' | 'dropship' | 'affiliate';
+type ResourceTab = 'platforms' | 'tips' | 'content' | 'checklist' | 'pod' | 'dropship' | 'affiliate' | 'workflows';
 
 const PLATFORM_ACCENT: Record<string, string> = {
   Etsy: 'from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-100 dark:border-orange-800/50',
@@ -1062,6 +1064,211 @@ function AffiliateTab() {
   );
 }
 
+// ── WORKFLOWS TAB ──────────────────────────────────────────────────────────────
+const STREAM_LABELS: Record<IncomeStreamType, string> = {
+  digital: '💻 Digital',
+  pod: '🖨 Print-on-Demand',
+  dropship: '📦 Dropshipping',
+  affiliate: '🔗 Affiliate',
+};
+
+const PLATFORM_ICONS: Record<WorkflowPlatform, string> = {
+  TikTok: '🎵',
+  Instagram: '📸',
+  Pinterest: '📌',
+  Email: '📧',
+};
+
+function WorkflowCard({ wf }: { wf: ProductWorkflow }) {
+  const [stepsOpen, setStepsOpen] = useState(false);
+  const [platform, setPlatform] = useState<WorkflowPlatform>('TikTok');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const platforms: WorkflowPlatform[] = ['TikTok', 'Instagram', 'Pinterest', 'Email'];
+  const content = wf.content.find(c => c.platform === platform);
+
+  const copy = (key: string, text: string) => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 1800);
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-50 dark:border-gray-800">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+            {STREAM_LABELS[wf.incomeStream]}
+          </span>
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{wf.priceExample}</span>
+        </div>
+        <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{wf.productExample}</p>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Sell on: {wf.sellOn}</p>
+      </div>
+
+      {/* Setup steps */}
+      <div className="px-4 py-3 border-b border-gray-50 dark:border-gray-800">
+        <button
+          onClick={() => setStepsOpen(o => !o)}
+          className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 w-full"
+        >
+          {stepsOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+          Setup steps ({wf.setupSteps.length})
+        </button>
+        {stepsOpen && (
+          <ol className="mt-2.5 space-y-2">
+            {wf.setupSteps.map((step, i) => (
+              <li key={i} className="flex items-start gap-2.5">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center mt-0.5">
+                  {i + 1}
+                </span>
+                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{step}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+
+      {/* Platform content tabs */}
+      <div className="px-4 pt-3 pb-1">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1">
+          {platforms.map(p => (
+            <button key={p} onClick={() => setPlatform(p)}
+              className={`flex-shrink-0 flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                platform === p
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}>
+              {PLATFORM_ICONS[p]} {p}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {content && (
+        <div className="px-4 pb-4 space-y-3">
+          {/* Hook */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
+                {platform === 'Email' ? 'Subject line' : 'Opening hook'}
+              </p>
+              <button onClick={() => copy('hook', content.hook)}
+                className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                {copiedKey === 'hook' ? '✓ Copied' : 'Copy'}
+              </button>
+            </div>
+            <p className="text-xs text-amber-800 dark:text-amber-200 font-medium leading-relaxed italic">"{content.hook}"</p>
+          </div>
+
+          {/* Script (TikTok/Reels only) */}
+          {content.script && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wide">Video script outline</p>
+                <button onClick={() => copy('script', content.script!)}
+                  className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                  {copiedKey === 'script' ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+              <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed whitespace-pre-line">{content.script}</p>
+            </div>
+          )}
+
+          {/* Caption */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                {platform === 'Email' ? 'Email body' : 'Caption'}
+              </p>
+              <button onClick={() => copy('caption', content.caption)}
+                className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium">
+                {copiedKey === 'caption' ? '✓ Copied' : 'Copy'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">{content.caption}</p>
+          </div>
+
+          {/* Hashtags */}
+          {content.hashtags.length > 0 && (
+            <div className="bg-violet-50 dark:bg-violet-900/20 rounded-xl p-3">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] font-bold text-violet-700 dark:text-violet-400 uppercase tracking-wide">Hashtags</p>
+                <button onClick={() => copy('hashtags', content.hashtags.join(' '))}
+                  className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">
+                  {copiedKey === 'hashtags' ? '✓ Copied' : 'Copy all'}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {content.hashtags.map(h => (
+                  <span key={h} className="text-[10px] bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded-full font-medium">{h}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Image prompt */}
+          <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">AI image prompt</p>
+              <button onClick={() => copy('image', content.imagePrompt)}
+                className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                {copiedKey === 'image' ? '✓ Copied' : 'Copy'}
+              </button>
+            </div>
+            <p className="text-xs text-emerald-800 dark:text-emerald-200 leading-relaxed">{content.imagePrompt}</p>
+            <p className="text-[10px] text-emerald-600 dark:text-emerald-500 mt-1.5 font-medium">↑ Paste into Midjourney or DALL-E 3 to generate your image</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WorkflowsTab() {
+  const [streamFilter, setStreamFilter] = useState<IncomeStreamType | 'all'>('all');
+  const streams: { value: IncomeStreamType | 'all'; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'digital', label: '💻 Digital' },
+    { value: 'pod', label: '🖨 POD' },
+    { value: 'dropship', label: '📦 Dropship' },
+    { value: 'affiliate', label: '🔗 Affiliate' },
+  ];
+
+  const filtered = streamFilter === 'all'
+    ? PRODUCT_WORKFLOWS
+    : PRODUCT_WORKFLOWS.filter(w => w.incomeStream === streamFilter);
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 p-4">
+        <p className="text-sm font-bold text-indigo-900 dark:text-indigo-200 mb-1">Full Workflow Examples</p>
+        <p className="text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed">
+          Each example includes a real product, setup steps, and ready-to-post content for TikTok, Instagram, Pinterest and Email — including an AI image prompt you can use in Midjourney or DALL-E.
+        </p>
+      </div>
+
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+        {streams.map(s => (
+          <button key={s.value} onClick={() => setStreamFilter(s.value)}
+            className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-full font-medium transition-all ${
+              streamFilter === s.value
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+            }`}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-4">
+        {filtered.map(wf => <WorkflowCard key={wf.id} wf={wf} />)}
+      </div>
+    </div>
+  );
+}
+
 export function Resources() {
   const [activeTab, setActiveTab] = useState<ResourceTab>('platforms');
 
@@ -1073,6 +1280,7 @@ export function Resources() {
     { id: 'pod', label: 'Print-on-Demand', icon: Printer },
     { id: 'dropship', label: 'Dropshipping', icon: ShoppingCart },
     { id: 'affiliate', label: 'Affiliate', icon: Link2 },
+    { id: 'workflows', label: 'Workflows', icon: ArrowRight },
   ];
 
   return (
@@ -1151,6 +1359,9 @@ export function Resources() {
 
       {/* Affiliate Marketing */}
       {activeTab === 'affiliate' && <AffiliateTab />}
+
+      {/* Full Workflow Examples */}
+      {activeTab === 'workflows' && <WorkflowsTab />}
     </div>
   );
 }

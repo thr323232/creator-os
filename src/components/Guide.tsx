@@ -16,6 +16,7 @@ interface NewRoadmapData {
   platform: PlatformName;
   price: number;
   description: string;
+  checklist?: { id: string; text: string; done: boolean }[];
 }
 
 interface Props {
@@ -283,6 +284,11 @@ export function Guide({ ideas, roadmapItems, onSaveToRoadmap, onRemoveFromRoadma
                 platform: CATEGORY_DEFAULT_PLATFORM[idea.category],
                 price: idea.pricingMin,
                 description: idea.description.slice(0, 150),
+                checklist: idea.launchChecklist.map((text, i) => ({
+                  id: `cl-${idea.id}-${i}`,
+                  text,
+                  done: false,
+                })),
               })}
               onUnsave={() => {
                 const savedId = getSavedId(idea.id);

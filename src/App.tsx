@@ -19,6 +19,7 @@ interface NewRoadmapData {
   platform: Product['platform'];
   price: number;
   description: string;
+  checklist?: { id: string; text: string; done: boolean }[];
 }
 
 function loadRoadmap(): RoadmapItem[] {
@@ -102,6 +103,37 @@ export default function App() {
     });
   }, []);
 
+  const handleToggleRoadmapChecklistItem = useCallback((roadmapId: string, checklistItemId: string) => {
+    setRoadmapItems(prev => {
+      const updated = prev.map(r => {
+        if (r.id !== roadmapId) return r;
+        return {
+          ...r,
+          checklist: r.checklist?.map(item =>
+            item.id === checklistItemId ? { ...item, done: !item.done } : item
+          ),
+        };
+      });
+      saveRoadmap(updated);
+      return updated;
+    });
+  }, []);
+
+  const handleAddReview = useCallback((productId: string, data: { rating: number; quote?: string }) => {
+    setProducts(prev => prev.map(p => {
+      if (p.id !== productId) return p;
+      const newReview = { id: nextId(), ...data, date: new Date().toISOString().slice(0, 10) };
+      return { ...p, reviews: [...(p.reviews || []), newReview] };
+    }));
+  }, []);
+
+  const handleDeleteReview = useCallback((productId: string, reviewId: string) => {
+    setProducts(prev => prev.map(p => {
+      if (p.id !== productId) return p;
+      return { ...p, reviews: (p.reviews || []).filter(r => r.id !== reviewId) };
+    }));
+  }, []);
+
   const handleStartBuilding = useCallback((item: RoadmapItem) => {
     setPendingTemplate({
       name: item.name,
@@ -144,6 +176,7 @@ export default function App() {
               roadmapItems={roadmapItems}
               onSaveToRoadmap={handleSaveToRoadmap}
               onNavigateToProducts={() => setActiveTab('products')}
+              onTabChange={setActiveTab}
             />
           )}
           {activeTab === 'products' && (
@@ -161,6 +194,9 @@ export default function App() {
               onRemoveFromRoadmap={handleRemoveFromRoadmap}
               onUpdateRoadmapStatus={handleUpdateRoadmapStatus}
               onStartBuilding={handleStartBuilding}
+              onToggleChecklistItem={handleToggleRoadmapChecklistItem}
+              onAddReview={handleAddReview}
+              onDeleteReview={handleDeleteReview}
               pendingTemplate={pendingTemplate}
               onClearPendingTemplate={() => setPendingTemplate(null)}
             />

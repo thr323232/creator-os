@@ -7,7 +7,7 @@ import {
   PoundSterling, Package, Star, Download,
   BarChart2, TrendingUp, Zap, ArrowUp, Bookmark, BookmarkCheck, ArrowRight,
 } from 'lucide-react';
-import type { Product, SaleLog, ChartDataPoint, RoadmapItem, ProductSuggestion } from '../types';
+import type { Product, SaleLog, ChartDataPoint, RoadmapItem, ProductSuggestion, TabName } from '../types';
 import { formatCurrency, formatCurrencyFull, CATEGORY_LABELS, CATEGORY_COLORS, PLATFORM_COLORS } from '../utils';
 import { SUGGESTED_PRODUCTS } from '../data/suggestionsData';
 
@@ -28,6 +28,7 @@ interface Props {
     description: string;
   }) => void;
   onNavigateToProducts: () => void;
+  onTabChange: (tab: TabName) => void;
 }
 
 const TAG_META: Record<string, { label: string; bg: string }> = {
@@ -125,9 +126,39 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 
 export function Dashboard({
   products, saleLogs, monthlyGoal, monthlyChartData, weeklyChartData,
-  darkMode, roadmapItems, onSaveToRoadmap, onNavigateToProducts,
+  darkMode, roadmapItems, onSaveToRoadmap, onNavigateToProducts, onTabChange,
 }: Props) {
   const [chartView, setChartView] = useState<'weekly' | 'monthly'>('monthly');
+
+  // Onboarding: show welcome screen when nothing exists yet
+  const isFirstTime = roadmapItems.length === 0 && products.length === 0;
+
+  // "What to do next" — pick highest-priority roadmap item
+  const focusItem = (() => {
+    if (roadmapItems.length === 0) return null;
+    const priority = ['in-progress', 'planning', 'idea', 'ready-to-launch'] as const;
+    for (const status of priority) {
+      const items = roadmapItems.filter(i => i.status === status);
+      if (items.length > 0) {
+        return items.sort((a, b) => new Date(a.savedAt).getTime() - new Date(b.savedAt).getTime())[0];
+      }
+    }
+    return null;
+  })();
+
+  const focusMessage = focusItem ? {
+    'in-progress': `🛠 Keep going — "${focusItem.name}" is mid-build. Knock out the next step today.`,
+    planning: `📋 "${focusItem.name}" has been in Planning a while. Ready to start building?`,
+    idea: `💡 You have ${roadmapItems.filter(i => i.status === 'idea').length} idea${roadmapItems.filter(i => i.status === 'idea').length > 1 ? 's' : ''} saved. Move one forward today.`,
+    'ready-to-launch': `🚀 "${focusItem.name}" is ready to go — have you published it yet?`,
+  }[focusItem.status] : null;
+
+  // Social proof — reviews across all products
+  const allReviews = products.flatMap(p => p.reviews || []);
+  const avgRating = allReviews.length > 0
+    ? allReviews.reduce((s, r) => s + r.rating, 0) / allReviews.length
+    : 0;
+  const bestReview = allReviews.filter(r => r.quote).sort((a, b) => b.rating - a.rating)[0];
 
   const totalRevenue = products.reduce((sum, p) => sum + p.price * p.unitsSold, 0);
   const liveProducts = products.filter(p => p.status === 'live').length;
@@ -168,6 +199,49 @@ export function Dashboard({
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Your Creator Dashboard</h1>
       </div>
 
+      {/* ── ONBOARDING (first-time users) ───────────────────────────────── */}
+      {isFirstTime && (
+        <div className="bg-gradient-to-br from-indigo-600 to-violet-600 rounded-2xl p-5 text-white">
+          <p className="text-base font-bold mb-0.5">👋 Welcome to Creator OS</p>
+          <p className="text-indigo-200 text-xs mb-4">Let's get your first product off the ground. Pick a starting point:</p>
+          <div className="space-y-2.5">
+            <button
+              onClick={() => onTabChange('guide')}
+              className="w-full flex items-center gap-3 bg-white/15 hover:bg-white/25 rounded-xl px-4 py-3 text-left transition-all active:scale-[0.98]"
+            >
+              <span className="text-xl">💡</span>
+              <div>
+                <p className="text-sm font-semibold">Browse Product Ideas</p>
+                <p className="text-[11px] text-indigo-200">21 curated ideas with step-by-step launch guides</p>
+              </div>
+              <ArrowRight size={14} className="ml-auto text-indigo-300 flex-shrink-0" />
+            </button>
+            <button
+              onClick={() => onTabChange('products')}
+              className="w-full flex items-center gap-3 bg-white/15 hover:bg-white/25 rounded-xl px-4 py-3 text-left transition-all active:scale-[0.98]"
+            >
+              <span className="text-xl">➕</span>
+              <div>
+                <p className="text-sm font-semibold">Add a Product Manually</p>
+                <p className="text-[11px] text-indigo-200">Already selling somewhere? Log it and track your revenue</p>
+              </div>
+              <ArrowRight size={14} className="ml-auto text-indigo-300 flex-shrink-0" />
+            </button>
+            <button
+              onClick={() => onTabChange('resources')}
+              className="w-full flex items-center gap-3 bg-white/15 hover:bg-white/25 rounded-xl px-4 py-3 text-left transition-all active:scale-[0.98]"
+            >
+              <span className="text-xl">💰</span>
+              <div>
+                <p className="text-sm font-semibold">Explore Ways to Earn</p>
+                <p className="text-[11px] text-indigo-200">Platforms, POD, Dropshipping, Affiliate Marketing & more</p>
+              </div>
+              <ArrowRight size={14} className="ml-auto text-indigo-300 flex-shrink-0" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Monthly Goal Banner */}
       <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-4 text-white">
         <div className="flex items-center justify-between mb-2">
@@ -187,6 +261,42 @@ export function Dashboard({
           <div className="bg-white rounded-full h-2 transition-all duration-700" style={{ width: `${goalProgress}%` }} />
         </div>
       </div>
+
+      {/* ── WHAT TO DO NEXT ───────────────────────────────────────────────── */}
+      {focusItem && focusMessage && (
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-indigo-100 dark:border-indigo-800/50 p-4">
+          <p className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 uppercase tracking-wide mb-1.5">What to do next</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug mb-1">{focusMessage}</p>
+          {focusItem.checklist && focusItem.checklist.length > 0 && (
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-2.5">
+              {focusItem.checklist.filter(c => c.done).length}/{focusItem.checklist.length} steps completed
+            </p>
+          )}
+          <button
+            onClick={onNavigateToProducts}
+            className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
+          >
+            View project <ArrowRight size={12} />
+          </button>
+        </div>
+      )}
+
+      {/* ── SOCIAL PROOF ──────────────────────────────────────────────────── */}
+      {allReviews.length > 0 && (
+        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-2xl border border-amber-100 dark:border-amber-800/50 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-amber-900 dark:text-amber-200">⭐ Your Reviews</p>
+            <div className="flex items-center gap-1">
+              <Star size={13} className="fill-amber-400 text-amber-400" />
+              <span className="text-sm font-bold text-amber-700 dark:text-amber-300">{avgRating.toFixed(1)}</span>
+              <span className="text-xs text-amber-500 dark:text-amber-400">({allReviews.length})</span>
+            </div>
+          </div>
+          {bestReview && (
+            <p className="text-xs text-amber-800 dark:text-amber-300 italic leading-relaxed">"{bestReview.quote}"</p>
+          )}
+        </div>
+      )}
 
       {/* ── IDEAS FOR YOU ─────────────────────────────────────────────────── */}
       <div>
