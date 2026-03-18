@@ -160,7 +160,7 @@ function IdeaCard({ idea, isSaved, onSave, onUnsave }: {
           {/* Save to Roadmap CTA */}
           <button
             onClick={e => { e.stopPropagation(); isSaved ? onUnsave() : onSave(); }}
-            className={`w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all active:scale-[0.98] ${
+            className={`w-full flex items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold transition-all active:scale-[0.98] ${
               isSaved
                 ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                 : 'bg-indigo-600 text-white hover:bg-indigo-700'
@@ -202,7 +202,7 @@ export function Guide({ ideas, roadmapItems, onSaveToRoadmap, onRemoveFromRoadma
   const pillInactive = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700';
 
   return (
-    <div className="px-4 pt-4 pb-6 space-y-4">
+    <div className="px-4 pt-5 pb-6 space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Product Ideas</h1>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">

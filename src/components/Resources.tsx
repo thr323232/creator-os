@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import {
-  CheckCircle2, Circle, ChevronDown, ChevronUp,
+  CheckCircle2, Circle, ChevronDown, ChevronUp, ChevronLeft,
   ExternalLink, PoundSterling, Lightbulb, Search,
   Users, Image, Copy, Check, Zap, Calendar, Hash, MessageSquare,
-  Printer, ShoppingCart, Link2, Calculator, Tag, ArrowRight,
+  Calculator, Tag, ArrowRight,
 } from 'lucide-react';
 import type { PlatformInfo } from '../types';
 import {
@@ -21,7 +21,9 @@ import {
 import { PRODUCT_WORKFLOWS } from '../data/contentWorkflowData';
 import type { ProductWorkflow, WorkflowPlatform, IncomeStreamType } from '../data/contentWorkflowData';
 
-type ResourceTab = 'platforms' | 'tips' | 'content' | 'checklist' | 'pod' | 'dropship' | 'affiliate' | 'workflows';
+type ResourceTab = 'earn' | 'guide';
+type EarnStream = 'digital' | 'pod' | 'dropship' | 'affiliate' | 'workflows' | null;
+type GuideSection = 'tips' | 'content' | 'checklist';
 
 const PLATFORM_ACCENT: Record<string, string> = {
   Etsy: 'from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-100 dark:border-orange-800/50',
@@ -1269,99 +1271,240 @@ function WorkflowsTab() {
   );
 }
 
-export function Resources() {
-  const [activeTab, setActiveTab] = useState<ResourceTab>('platforms');
+// ── INCOME STREAM CARD ────────────────────────────────────────────────────────
 
-  const tabs: { id: ResourceTab; label: string; icon: React.FC<{ size?: number; className?: string }> }[] = [
-    { id: 'platforms', label: 'Platforms', icon: ExternalLink },
-    { id: 'tips', label: 'Tips', icon: Lightbulb },
-    { id: 'content', label: 'Content', icon: Zap },
-    { id: 'checklist', label: 'Checklist', icon: CheckCircle2 },
-    { id: 'pod', label: 'Print-on-Demand', icon: Printer },
-    { id: 'dropship', label: 'Dropshipping', icon: ShoppingCart },
-    { id: 'affiliate', label: 'Affiliate', icon: Link2 },
-    { id: 'workflows', label: 'Workflows', icon: ArrowRight },
+function IncomeStreamCard({ emoji, title, description, gradientFrom, gradientTo, borderColor, onClick }: {
+  emoji: string;
+  title: string;
+  description: string;
+  gradientFrom: string;
+  gradientTo: string;
+  borderColor: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className={`bg-gradient-to-br ${gradientFrom} ${gradientTo} rounded-2xl border ${borderColor} overflow-hidden shadow-sm`}>
+      <div className="p-4">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1">
+            <p className="text-lg font-bold text-gray-900 dark:text-white">{emoji} {title}</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">{description}</p>
+          </div>
+        </div>
+        <button
+          onClick={onClick}
+          className="mt-3 w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-3 text-sm font-semibold transition-all active:scale-[0.98]"
+        >
+          Explore <ArrowRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DigitalProductsContent() {
+  return (
+    <div className="space-y-3">
+      {PLATFORMS.map(platform => <PlatformCard key={platform.name} platform={platform} />)}
+      <div className="bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Lightbulb size={16} className="text-indigo-600 dark:text-indigo-400" />
+          <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Quick Resources</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: 'Smartmockups', sub: 'Free mockup tool' },
+            { label: 'Canva', sub: 'Design tool' },
+            { label: 'EverBee', sub: 'Etsy research' },
+            { label: 'Marmalead', sub: 'Etsy SEO' },
+          ].map(link => (
+            <div key={link.label} className="bg-white dark:bg-gray-900 rounded-xl p-3 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{link.label}</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">{link.sub}</p>
+              </div>
+              <ExternalLink size={12} className="text-indigo-400 shrink-0" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const EARN_STREAMS: {
+  id: Exclude<EarnStream, null>;
+  emoji: string;
+  title: string;
+  description: string;
+  gradientFrom: string;
+  gradientTo: string;
+  borderColor: string;
+}[] = [
+  {
+    id: 'digital',
+    emoji: '💻',
+    title: 'Digital Products',
+    description: 'Sell templates, ebooks, presets & more — zero stock, instant delivery.',
+    gradientFrom: 'from-indigo-50 dark:from-indigo-900/20',
+    gradientTo: 'to-violet-50 dark:to-violet-900/20',
+    borderColor: 'border-indigo-100 dark:border-indigo-800/50',
+  },
+  {
+    id: 'pod',
+    emoji: '🖨️',
+    title: 'Print-on-Demand',
+    description: 'Design once, sell forever — no stock, no upfront costs. Printed and shipped on order.',
+    gradientFrom: 'from-violet-50 dark:from-violet-900/20',
+    gradientTo: 'to-purple-50 dark:to-purple-900/20',
+    borderColor: 'border-violet-100 dark:border-violet-800/50',
+  },
+  {
+    id: 'dropship',
+    emoji: '📦',
+    title: 'Dropshipping',
+    description: 'Sell physical products without holding stock — suppliers ship directly to customers.',
+    gradientFrom: 'from-emerald-50 dark:from-emerald-900/20',
+    gradientTo: 'to-teal-50 dark:to-teal-900/20',
+    borderColor: 'border-emerald-100 dark:border-emerald-800/50',
+  },
+  {
+    id: 'affiliate',
+    emoji: '🔗',
+    title: 'Affiliate Marketing',
+    description: 'Recommend tools you use and earn a commission every time someone signs up or buys.',
+    gradientFrom: 'from-teal-50 dark:from-teal-900/20',
+    gradientTo: 'to-cyan-50 dark:to-cyan-900/20',
+    borderColor: 'border-teal-100 dark:border-teal-800/50',
+  },
+  {
+    id: 'workflows',
+    emoji: '📋',
+    title: 'Content Workflows',
+    description: 'Full launch playbooks with ready-to-post social copy, hooks, captions and AI image prompts.',
+    gradientFrom: 'from-amber-50 dark:from-amber-900/20',
+    gradientTo: 'to-orange-50 dark:to-orange-900/20',
+    borderColor: 'border-amber-100 dark:border-amber-800/50',
+  },
+];
+
+const STREAM_TITLES: Record<Exclude<EarnStream, null>, string> = {
+  digital: '💻 Digital Products',
+  pod: '🖨️ Print-on-Demand',
+  dropship: '📦 Dropshipping',
+  affiliate: '🔗 Affiliate Marketing',
+  workflows: '📋 Content Workflows',
+};
+
+export function Resources() {
+  const [activeTab, setActiveTab] = useState<ResourceTab>('earn');
+  const [earnStream, setEarnStream] = useState<EarnStream>(null);
+  const [guideSection, setGuideSection] = useState<GuideSection>('tips');
+
+  const guideSections: { id: GuideSection; label: string }[] = [
+    { id: 'tips', label: 'Tips' },
+    { id: 'content', label: 'Content' },
+    { id: 'checklist', label: 'Checklist' },
   ];
 
   return (
-    <div className="px-4 pt-4 pb-6 space-y-4">
+    <div className="px-4 pt-5 pb-6 space-y-4">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Earn</h1>
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Platforms, content tools, and 3 more ways to earn</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Ways to Earn</h1>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Pick an income stream or browse the guide</p>
       </div>
 
-      {/* Internal tab strip — scrollable */}
-      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
-        {tabs.map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setActiveTab(id)}
-            className={`flex-shrink-0 flex items-center gap-1.5 text-xs px-3 py-2 rounded-xl font-semibold transition-all ${
-              activeTab === id
+      {/* Top toggle: Earn / Guide */}
+      {earnStream === null && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab('earn')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === 'earn'
                 ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-300 dark:hover:border-indigo-700'
-            }`}>
-            <Icon size={12} />
-            {label}
+                : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            💰 Earn
           </button>
-        ))}
-      </div>
+          <button
+            onClick={() => setActiveTab('guide')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === 'guide'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+            }`}
+          >
+            📚 Guide
+          </button>
+        </div>
+      )}
 
-      {/* Platforms */}
-      {activeTab === 'platforms' && (
+      {/* ── EARN TAB ── */}
+      {activeTab === 'earn' && earnStream === null && (
         <div className="space-y-3">
-          {PLATFORMS.map(platform => <PlatformCard key={platform.name} platform={platform} />)}
-          <div className="bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-900/20 dark:to-violet-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Lightbulb size={16} className="text-indigo-600 dark:text-indigo-400" />
-              <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Quick Resources</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'Smartmockups', sub: 'Free mockup tool' },
-                { label: 'Canva', sub: 'Design tool' },
-                { label: 'EverBee', sub: 'Etsy research' },
-                { label: 'Marmalead', sub: 'Etsy SEO' },
-              ].map(link => (
-                <div key={link.label} className="bg-white dark:bg-gray-900 rounded-xl p-3 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{link.label}</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500">{link.sub}</p>
-                  </div>
-                  <ExternalLink size={12} className="text-indigo-400 shrink-0" />
-                </div>
-              ))}
-            </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Choose how you want to make money as a creator.</p>
+          {EARN_STREAMS.map(s => (
+            <IncomeStreamCard
+              key={s.id}
+              emoji={s.emoji}
+              title={s.title}
+              description={s.description}
+              gradientFrom={s.gradientFrom}
+              gradientTo={s.gradientTo}
+              borderColor={s.borderColor}
+              onClick={() => setEarnStream(s.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── EARN STREAM DETAIL ── */}
+      {activeTab === 'earn' && earnStream !== null && (
+        <div className="space-y-4">
+          <button
+            onClick={() => setEarnStream(null)}
+            className="flex items-center gap-1 text-sm text-indigo-600 dark:text-indigo-400 font-medium"
+          >
+            <ChevronLeft size={16} /> Back to income streams
+          </button>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">{STREAM_TITLES[earnStream]}</h2>
+          {earnStream === 'digital' && <DigitalProductsContent />}
+          {earnStream === 'pod' && <PrintOnDemandTab />}
+          {earnStream === 'dropship' && <DropshippingTab />}
+          {earnStream === 'affiliate' && <AffiliateTab />}
+          {earnStream === 'workflows' && <WorkflowsTab />}
+        </div>
+      )}
+
+      {/* ── GUIDE TAB ── */}
+      {activeTab === 'guide' && (
+        <div className="space-y-4">
+          <div className="flex gap-1.5">
+            {guideSections.map(({ id, label }) => (
+              <button key={id} onClick={() => setGuideSection(id)}
+                className={`flex-1 text-xs px-3 py-2.5 rounded-xl font-semibold transition-all ${
+                  guideSection === id
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400'
+                }`}>
+                {label}
+              </button>
+            ))}
           </div>
+          {guideSection === 'tips' && (
+            <div className="space-y-3">
+              <TipSection title="Pricing Strategy" icon={PoundSterling} tips={PRICING_TIPS} defaultOpen />
+              <TipSection title="Product Mockups" icon={Image} tips={MOCKUP_TIPS} />
+              <TipSection title="SEO for Listings" icon={Search} tips={SEO_TIPS} />
+              <TipSection title="Growing Your Audience" icon={Users} tips={AUDIENCE_TIPS} />
+            </div>
+          )}
+          {guideSection === 'content' && <ContentTab />}
+          {guideSection === 'checklist' && <LaunchChecklistSection />}
         </div>
       )}
-
-      {/* Tips */}
-      {activeTab === 'tips' && (
-        <div className="space-y-3">
-          <TipSection title="Pricing Strategy" icon={PoundSterling} tips={PRICING_TIPS} defaultOpen />
-          <TipSection title="Product Mockups" icon={Image} tips={MOCKUP_TIPS} />
-          <TipSection title="SEO for Listings" icon={Search} tips={SEO_TIPS} />
-          <TipSection title="Growing Your Audience" icon={Users} tips={AUDIENCE_TIPS} />
-        </div>
-      )}
-
-      {/* Content Ideas */}
-      {activeTab === 'content' && <ContentTab />}
-
-      {/* Launch Checklist */}
-      {activeTab === 'checklist' && <LaunchChecklistSection />}
-
-      {/* Print-on-Demand */}
-      {activeTab === 'pod' && <PrintOnDemandTab />}
-
-      {/* Dropshipping */}
-      {activeTab === 'dropship' && <DropshippingTab />}
-
-      {/* Affiliate Marketing */}
-      {activeTab === 'affiliate' && <AffiliateTab />}
-
-      {/* Full Workflow Examples */}
-      {activeTab === 'workflows' && <WorkflowsTab />}
     </div>
   );
 }

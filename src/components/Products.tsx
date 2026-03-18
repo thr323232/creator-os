@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import {
   Plus, Edit2, Trash2, Target, Filter, Package,
-  ChevronDown, ChevronUp, X, Check, PlusCircle, ArrowRight, Sparkles,
+  ChevronDown, ChevronUp, X, Check, Copy, PlusCircle, ArrowRight, Sparkles,
   Bookmark, BookmarkCheck, MapPin, ChevronRight, CheckCircle2, Circle,
   Star, MessageSquare, Lightbulb,
 } from 'lucide-react';
@@ -15,6 +15,8 @@ import {
   ALL_PLATFORMS, ALL_STATUSES, getSeoTitleSuggestions,
 } from '../utils';
 import { SUGGESTED_PRODUCTS } from '../data/suggestionsData';
+import { HOOK_BANK, HASHTAG_SETS } from '../data/contentData';
+import { PRICING_TIPS, SEO_TIPS } from '../data/resourceData';
 
 interface NewRoadmapData {
   sourceId?: string;
@@ -261,6 +263,19 @@ function RoadmapSection({ items, onRemove, onUpdateStatus, onStartBuilding, onTo
 
       {open && (
         <div className="border-t border-indigo-50 dark:border-indigo-800/50">
+          {/* Journey banner */}
+          <div className="px-4 pt-3 pb-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {[{ emoji: '💡', label: 'Idea' }, { emoji: '📋', label: 'Plan' }, { emoji: '🛠', label: 'Build' }, { emoji: '🚀', label: 'Live' }].map((step, i, arr) => (
+                <div key={step.label} className="flex items-center gap-1">
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">{step.emoji} {step.label}</span>
+                  {i < arr.length - 1 && <span className="text-gray-300 dark:text-gray-600 text-[10px]">→</span>}
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">Ideas you're planning to build. Tap "Start Building" to create the product listing.</p>
+          </div>
+
           {/* Status filter tabs */}
           <div className="flex gap-1.5 px-4 py-2.5 overflow-x-auto scrollbar-hide">
             <button onClick={() => setFilter('all')}
@@ -334,8 +349,9 @@ function RoadmapSection({ items, onRemove, onUpdateStatus, onStartBuilding, onTo
                         )}
                       </div>
                       <button onClick={() => onStartBuilding(item)}
-                        className="flex items-center gap-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-2.5 py-1 rounded-full hover:bg-indigo-100 dark:hover:bg-indigo-900/50 active:scale-95 transition-all">
-                        Start Building <ArrowRight size={10} />
+                        className="flex flex-col items-center gap-0 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 active:scale-95 transition-all">
+                        <span className="flex items-center gap-1 text-[11px] font-semibold">Start Building <ArrowRight size={10} /></span>
+                        <span className="text-[9px] text-indigo-400 dark:text-indigo-500 font-normal">Opens product form</span>
                       </button>
                     </div>
 
@@ -455,17 +471,17 @@ function InspirationBoard({ roadmapItems, onSaveToRoadmap, onUseTemplate, defaul
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => !saved && onSaveToRoadmap({ sourceId: s.id, name: s.name, category: s.category, platform: s.platform, price: s.price, description: s.description })}
-                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+                      className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-3 text-xs font-semibold transition-all active:scale-95 ${
                         saved
                           ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                           : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700'
                       }`}
                     >
-                      {saved ? <><BookmarkCheck size={11} /> Saved</> : <><Bookmark size={11} /> Save to Roadmap</>}
+                      {saved ? <><BookmarkCheck size={11} /> Saved to plan</> : <><Bookmark size={11} /> Plan for later</>}
                     </button>
                     <button onClick={() => onUseTemplate(s)}
-                      className="flex-1 flex items-center justify-center gap-1.5 bg-indigo-600 text-white rounded-xl py-1.5 text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all">
-                      Use template <ChevronRight size={11} />
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-indigo-600 text-white rounded-xl py-3 text-xs font-semibold hover:bg-indigo-700 active:scale-95 transition-all">
+                      Start building now <ChevronRight size={11} />
                     </button>
                   </div>
                 </div>
@@ -660,6 +676,93 @@ function LogSaleModal({ product, onLog, onClose }: {
   );
 }
 
+// ── PRODUCT MARKETING GUIDE ─────────────────────────────────────────────────────
+function CopyBtn({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text).catch(() => {}); setCopied(true); setTimeout(() => setCopied(false), 1800); }}
+      className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg transition-all ${copied ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400'}`}
+    >
+      {copied ? <Check size={9} /> : <Copy size={9} />} {copied ? 'Copied' : 'Copy'}
+    </button>
+  );
+}
+
+function ProductGuide({ product }: { product: Product }) {
+  const [open, setOpen] = useState(false);
+
+  // Find matching hooks (by category label match in the hook's category text)
+  const categoryLabel = CATEGORY_LABELS[product.category].toLowerCase();
+  const matchingHooks = HOOK_BANK.filter(h => h.category.toLowerCase().includes(categoryLabel)).slice(0, 2);
+  const fallbackHooks = HOOK_BANK.slice(0, 2);
+  const hooks = matchingHooks.length > 0 ? matchingHooks : fallbackHooks;
+
+  // Find matching hashtag set
+  const hashtagSet = HASHTAG_SETS.find(h => h.category.toLowerCase().includes(categoryLabel));
+
+  // Pick 2 quick tips — alternate between pricing and SEO tips
+  const quickTips = [PRICING_TIPS[0], SEO_TIPS[0]];
+
+  return (
+    <div className="mt-3 border-t border-gray-50 dark:border-gray-800 pt-3">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700"
+      >
+        <Lightbulb size={13} />
+        How to promote this
+        {open ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-3">
+          {/* Hooks */}
+          <div>
+            <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Hook ideas</p>
+            <div className="space-y-1.5">
+              {hooks.map(hook => (
+                <div key={hook.id} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-2.5 flex items-start justify-between gap-2">
+                  <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed flex-1">"{hook.text}"</p>
+                  <CopyBtn text={hook.text} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Hashtags */}
+          {hashtagSet && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Hashtags ({hashtagSet.platform})</p>
+                <CopyBtn text={hashtagSet.tags.join(' ')} />
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {hashtagSet.tags.slice(0, 10).map(tag => (
+                  <span key={tag} className="text-[10px] bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 px-1.5 py-0.5 rounded-full font-medium">{tag}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Quick tips */}
+          <div>
+            <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Quick tips</p>
+            <div className="space-y-1.5">
+              {quickTips.map((tip, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="text-indigo-500 mt-0.5 flex-shrink-0">→</span>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed"><span className="font-semibold text-gray-700 dark:text-gray-300">{tip.title}:</span> {tip.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── REVIEW SECTION ─────────────────────────────────────────────────────────────
 function ReviewSection({ product, onAdd, onDelete }: {
   product: Product;
@@ -835,7 +938,7 @@ export function Products({
   const cardClass = 'bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800';
 
   return (
-    <div className="px-4 pt-4 pb-6 space-y-4">
+    <div className="px-4 pt-5 pb-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -845,7 +948,7 @@ export function Products({
           </p>
         </div>
         <button onClick={openNewForm}
-          className="flex items-center gap-1.5 bg-indigo-600 text-white rounded-xl px-3.5 py-2.5 text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all shadow-sm shadow-indigo-200 dark:shadow-indigo-900">
+          className="flex items-center gap-1.5 bg-indigo-600 text-white rounded-xl px-4 py-3 text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all shadow-sm shadow-indigo-200 dark:shadow-indigo-900">
           <Plus size={16} />
           Add
         </button>
@@ -1010,6 +1113,9 @@ export function Products({
                       </button>
                     )}
                   </div>
+
+                  {/* Marketing guide */}
+                  <ProductGuide product={product} />
 
                   {/* Review section */}
                   <ReviewSection

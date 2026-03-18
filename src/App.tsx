@@ -163,7 +163,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto pb-20">
+      <main className="max-w-2xl mx-auto" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
         <div className="transition-opacity duration-150" key={activeTab}>
           {activeTab === 'dashboard' && (
             <Dashboard

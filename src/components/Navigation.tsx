@@ -15,7 +15,7 @@ const TABS: { id: TabName; label: string; Icon: React.FC<{ size?: number; classN
 
 export function Navigation({ activeTab, onTabChange }: Props) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200/80 dark:border-gray-800/80 shadow-xl shadow-black/5">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200/80 dark:border-gray-800/80 shadow-xl shadow-black/5 pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-2xl mx-auto flex px-2">
         {TABS.map(({ id, label, Icon }) => {
           const isActive = activeTab === id;
@@ -23,7 +23,7 @@ export function Navigation({ activeTab, onTabChange }: Props) {
             <button
               key={id}
               onClick={() => onTabChange(id)}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 px-1 transition-all duration-200 relative`}
+              className={`flex-1 flex flex-col items-center gap-0.5 py-3 px-1 transition-all duration-200 relative`}
             >
               {/* Active pill background */}
               {isActive && (
