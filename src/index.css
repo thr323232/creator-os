@@ -12,6 +12,9 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  .dark body {
+    background-color: #030712;
+  }
   #root {
     width: 100%;
     min-height: 100svh;

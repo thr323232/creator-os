@@ -72,3 +72,12 @@ export interface ChartDataPoint {
   label: string;
   revenue: number;
 }
+
+export interface ProductSuggestion {
+  id: string;
+  name: string;
+  category: Category;
+  platform: PlatformName;
+  price: number;
+  description: string;
+}

@@ -1,0 +1,68 @@
+import type { ProductSuggestion } from '../types';
+
+export const SUGGESTED_PRODUCTS: ProductSuggestion[] = [
+  {
+    id: 'sug1',
+    name: 'Canva Social Media Bundle',
+    category: 'template',
+    platform: 'Etsy',
+    price: 12,
+    description: '30 branded post templates for Instagram, TikTok & Pinterest — one of the top-selling digital products on Etsy.',
+  },
+  {
+    id: 'sug2',
+    name: 'Notion Life OS',
+    category: 'notion-template',
+    platform: 'Gumroad',
+    price: 15,
+    description: 'An all-in-one Notion workspace covering goals, habits, finances & journaling. Huge demand year-round.',
+  },
+  {
+    id: 'sug3',
+    name: 'Lightroom Preset Pack',
+    category: 'preset',
+    platform: 'Creative Market',
+    price: 22,
+    description: 'A cohesive set of 10–20 Lightroom presets for a specific aesthetic — moody film, clean bright, vintage, etc.',
+  },
+  {
+    id: 'sug4',
+    name: 'Printable Budget Planner',
+    category: 'printable',
+    platform: 'Etsy',
+    price: 5,
+    description: 'Monthly budget tracker and expense planner — high demand from the #BudgetTok community.',
+  },
+  {
+    id: 'sug5',
+    name: 'ATS Resume Template',
+    category: 'template',
+    platform: 'Etsy',
+    price: 8,
+    description: 'A clean, ATS-friendly CV template in Canva or Google Docs. Evergreen demand from job seekers.',
+  },
+  {
+    id: 'sug6',
+    name: 'Procreate Brush Set',
+    category: 'digital-art',
+    platform: 'Creative Market',
+    price: 15,
+    description: 'Custom Procreate brushes for lettering, textures, or watercolour effects. Artists pay well for quality tools.',
+  },
+  {
+    id: 'sug7',
+    name: 'Instagram Story Pack',
+    category: 'template',
+    platform: 'Etsy',
+    price: 7,
+    description: '20–30 editable Canva story templates for a specific niche — coaches, food brands, real estate agents, etc.',
+  },
+  {
+    id: 'sug8',
+    name: 'Budget Tracker Spreadsheet',
+    category: 'template',
+    platform: 'Gumroad',
+    price: 9,
+    description: 'A Google Sheets or Excel budget tracker with income, expenses, savings goals and automatic formulas.',
+  },
+];
